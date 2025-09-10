@@ -8,23 +8,17 @@ datasource db {
 }
 
 model Section {
-  id          Int        @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
   description String?
-  coverImage  String?    // URL to cover image in Cloudflare R2
-  parentId    Int?       // null means top-level section (Level 1)
-  
-  // Self-referencing relation for nested sections
-  parent      Section?   @relation("SubSections", fields: [parentId], references: [id], onDelete: Cascade)
-  children    Section[]  @relation("SubSections")
-  
-  // Products can only exist in sections (we'll enforce Level 3 in business logic)
+  coverImage  String?
+  parentId    Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   products    Product[]
+  parent      Section?  @relation("SubSections", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Section[] @relation("SubSections")
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Ensure unique names within the same parent section
   @@unique([name, parentId])
 }
 
@@ -32,13 +26,11 @@ model Product {
   id          Int      @id @default(autoincrement())
   title       String
   description String?
-  price       Float    // Price in your currency
-  tags        String[] // Array of tags for filtering/searching  
-  images      String[] // Array of image URLs in Cloudflare R2
-
-  sectionId   Int      // Foreign key to Section (must be Level 3)
-  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-
+  price       Float
+  tags        String[]
+  sectionId   Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  images      String[]
+  section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 }
