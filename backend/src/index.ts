@@ -461,7 +461,10 @@ app.put("/:sectionName", authenticateArtist, async (req, res) => {
 
     const section = await prisma.section.updateMany({
       where: { 
-        name: sectionName,
+        OR: [
+          { name: sectionName },
+          { name: sectionName.replace(/-/g, ' ') } // Convert slug back to name
+        ],
         parentId: null 
       },
       data: {
@@ -483,16 +486,68 @@ app.put("/:sectionName", authenticateArtist, async (req, res) => {
   }
 });
 
-// PUT /:sectionName/:id - Edit product
-app.put("/:sectionName/:id", authenticateArtist, async (req, res) => {
+// PUT /:sectionName/:subsectionName - Edit subsection
+app.put("/:sectionName/:subsectionName", authenticateArtist, async (req, res) => {
   try {
-    const { sectionName, id } = req.params;
-    const { title, description, price, tags, images } = req.body;
+    const { sectionName, subsectionName } = req.params;
+    const { name, description, coverImage } = req.body;
 
-    if (!sectionName || !id) {
-      res.status(400).json({ error: 'Section name and product ID are required' });
+    if (!sectionName || !subsectionName) {
+      res.status(400).json({ error: 'Section name and subsection name are required' });
       return;
     }
+
+    // Convert URL parameters back to names
+    const actualSectionName = sectionName.replace(/-/g, ' ');
+    const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+
+    // Find and update the subsection
+    const subsection = await prisma.section.updateMany({
+      where: {
+        OR: [
+          { name: subsectionName },
+          { name: actualSubsectionName }
+        ],
+        parent: {
+          OR: [
+            { name: sectionName },
+            { name: actualSectionName }
+          ]
+        }
+      },
+      data: {
+        name: name || actualSubsectionName,
+        description,
+        coverImage
+      }
+    });
+
+    if (subsection.count === 0) {
+      res.status(404).json({ error: 'Subsection not found' });
+      return;
+    }
+
+    res.json({ message: 'Subsection updated successfully' });
+  } catch (error) {
+    console.error('Error updating subsection:', error);
+    res.status(500).json({ error: 'Failed to update subsection' });
+  }
+});
+
+// PUT /:sectionName/:subsectionName/:id - Edit product
+app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res) => {
+  try {
+    const { sectionName, subsectionName, id } = req.params;
+    const { title, description, price, tags, images } = req.body;
+
+    if (!sectionName || !subsectionName || !id) {
+      res.status(400).json({ error: 'Section name, subsection name, and product ID are required' });
+      return;
+    }
+
+    // Convert URL parameters back to names
+    const actualSectionName = sectionName.replace(/-/g, ' ');
+    const actualSubsectionName = subsectionName.replace(/-/g, ' ');
 
     // Build update data object with only defined values
     const updateData: any = {};
@@ -506,8 +561,15 @@ app.put("/:sectionName/:id", authenticateArtist, async (req, res) => {
       where: {
         id: parseInt(id),
         section: {
+          OR: [
+            { name: subsectionName },
+            { name: actualSubsectionName }
+          ],
           parent: {
-            name: sectionName
+            OR: [
+              { name: sectionName },
+              { name: actualSectionName }
+            ]
           }
         }
       },
@@ -538,7 +600,10 @@ app.delete("/:sectionName", authenticateArtist, async (req, res) => {
 
     const section = await prisma.section.deleteMany({
       where: { 
-        name: sectionName,
+        OR: [
+          { name: sectionName },
+          { name: sectionName.replace(/-/g, ' ') } // Convert slug back to name
+        ],
         parentId: null 
       }
     });
@@ -555,22 +620,75 @@ app.delete("/:sectionName", authenticateArtist, async (req, res) => {
   }
 });
 
-// DELETE /:sectionName/:id - Delete product
-app.delete("/:sectionName/:id", authenticateArtist, async (req, res) => {
+// DELETE /:sectionName/:subsectionName - Delete subsection
+app.delete("/:sectionName/:subsectionName", authenticateArtist, async (req, res) => {
   try {
-    const { sectionName, id } = req.params;
+    const { sectionName, subsectionName } = req.params;
 
-    if (!sectionName || !id) {
-      res.status(400).json({ error: 'Section name and product ID are required' });
+    if (!sectionName || !subsectionName) {
+      res.status(400).json({ error: 'Section name and subsection name are required' });
       return;
     }
+
+    // Convert URL parameters back to names
+    const actualSectionName = sectionName.replace(/-/g, ' ');
+    const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+
+    // Find and delete the subsection
+    const subsection = await prisma.section.deleteMany({
+      where: {
+        OR: [
+          { name: subsectionName },
+          { name: actualSubsectionName }
+        ],
+        parent: {
+          OR: [
+            { name: sectionName },
+            { name: actualSectionName }
+          ]
+        }
+      }
+    });
+
+    if (subsection.count === 0) {
+      res.status(404).json({ error: 'Subsection not found' });
+      return;
+    }
+
+    res.json({ message: 'Subsection deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting subsection:', error);
+    res.status(500).json({ error: 'Failed to delete subsection' });
+  }
+});
+
+// DELETE /:sectionName/:subsectionName/:id - Delete product
+app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res) => {
+  try {
+    const { sectionName, subsectionName, id } = req.params;
+
+    if (!sectionName || !subsectionName || !id) {
+      res.status(400).json({ error: 'Section name, subsection name, and product ID are required' });
+      return;
+    }
+
+    // Convert URL parameters back to names
+    const actualSectionName = sectionName.replace(/-/g, ' ');
+    const actualSubsectionName = subsectionName.replace(/-/g, ' ');
 
     const product = await prisma.product.deleteMany({
       where: {
         id: parseInt(id),
         section: {
+          OR: [
+            { name: subsectionName },
+            { name: actualSubsectionName }
+          ],
           parent: {
-            name: sectionName
+            OR: [
+              { name: sectionName },
+              { name: actualSectionName }
+            ]
           }
         }
       }
