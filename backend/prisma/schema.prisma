@@ -34,7 +34,7 @@ model Product {
   description String?
   price       Float    // Price in your currency
   tags        String[] // Array of tags for filtering/searching  
-  imageUrl    String   // URL to product image in Cloudflare R2
+  images      String[] // Array of image URLs in Cloudflare R2
 
   sectionId   Int      // Foreign key to Section (must be Level 3)
   section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
