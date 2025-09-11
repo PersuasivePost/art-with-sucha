@@ -3,6 +3,11 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import multer from "multer";
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
 
 // Extend Express Request type to include artist property
 declare global {
@@ -19,6 +24,80 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
+
+// Initialize S3 client for Backblaze B2
+const s3Client = new S3Client({
+  region: process.env.B2_REGION || 'us-east-005',
+  endpoint: process.env.B2_ENDPOINT || 'https://s3.us-east-005.backblazeb2.com',
+  credentials: {
+    accessKeyId: process.env.B2_APPLICATION_KEY_ID || '',
+    secretAccessKey: process.env.B2_APPLICATION_KEY || '',
+  },
+  forcePathStyle: true, // Required for B2
+  requestHandler: {
+    requestTimeout: 30000,
+    httpsAgent: {
+      maxSockets: 25,
+      keepAlive: true,
+    }
+  }
+});
+
+// Configure multer for memory storage
+const storage = multer.memoryStorage();
+const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'));
+  }
+};
+const upload = multer({ storage, fileFilter });
+const uploadSingleImage = upload.single('image');
+const uploadMultipleImages = upload.array('images', 10);
+
+// Upload functions
+async function uploadFileToB2(file: Express.Multer.File, folder: string) {
+  const fileExtension = path.extname(file.originalname);
+  const fileName = `${uuidv4()}${fileExtension}`;
+  const key = `${folder}/${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: process.env.B2_BUCKET_NAME || '',
+    Key: key,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+    Metadata: {
+      originalName: file.originalname,
+      uploadedAt: new Date().toISOString(),
+    },
+  });
+
+  await s3Client.send(command);
+  return {
+    key,
+    url: `${process.env.B2_ENDPOINT}/${process.env.B2_BUCKET_NAME}/${key}`,
+    metadata: {
+      originalName: file.originalname,
+      size: file.size,
+      mimeType: file.mimetype,
+      uploadedAt: new Date().toISOString(),
+    },
+  };
+}
+
+async function uploadMultipleFilesToB2(files: Express.Multer.File[], folder: string) {
+  const uploadPromises = files.map(file => uploadFileToB2(file, folder));
+  return Promise.all(uploadPromises);
+}
+
+async function generateSignedUrl(key: string, expiresIn: number = 3600) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.B2_BUCKET_NAME || '',
+    Key: key,
+  });
+  return await getSignedUrl(s3Client, command, { expiresIn });
+}
 
 // Middleware
 app.use(cors());
@@ -293,13 +372,28 @@ app.get("/:sectionName/:subsectionName/:productId", async (req, res) => {
 // ====== PROTECTED ROUTES (Artist Only) ======
 
 // POST /create-section - Create main section (Level 1)
-app.post("/create-section", authenticateArtist, async (req, res) => {
+app.post("/create-section", authenticateArtist, uploadSingleImage, async (req, res) => {
   try {
-    const { name, description, coverImage } = req.body;
+    const { name, description } = req.body;
+    const imageFile = req.file;
 
     if (!name) {
       res.status(400).json({ error: 'Section name is required' });
       return;
+    }
+
+    let coverImageKey = null;
+
+    // Upload image if provided
+    if (imageFile) {
+      try {
+        const uploadResult = await uploadFileToB2(imageFile, 'sections');
+        coverImageKey = uploadResult.key;
+      } catch (uploadError) {
+        console.error('Error uploading section image:', uploadError);
+        res.status(500).json({ error: 'Failed to upload image' });
+        return;
+      }
     }
 
     // Create main section (Level 1)
@@ -307,7 +401,7 @@ app.post("/create-section", authenticateArtist, async (req, res) => {
       data: {
         name,
         description,
-        coverImage,
+        coverImage: coverImageKey,
         parentId: null // This makes it a main section
       }
     });
@@ -324,10 +418,11 @@ app.post("/create-section", authenticateArtist, async (req, res) => {
 });
 
 // POST /:sectionName - Add a sub-section under sectionName (Level 2)
-app.post("/:sectionName", authenticateArtist, async (req, res) => {
+app.post("/:sectionName", authenticateArtist, uploadSingleImage, async (req, res) => {
   try {
     const { sectionName } = req.params;
-    const { name, description, coverImage } = req.body;
+    const { name, description } = req.body;
+    const imageFile = req.file;
 
     if (!sectionName || !name) {
       res.status(400).json({ error: 'Section name and subsection name are required' });
@@ -336,6 +431,20 @@ app.post("/:sectionName", authenticateArtist, async (req, res) => {
 
     // Convert URL parameter back to section name
     const actualSectionName = sectionName.replace(/-/g, ' ');
+
+    let coverImageKey = null;
+
+    // Upload image if provided
+    if (imageFile) {
+      try {
+        const uploadResult = await uploadFileToB2(imageFile, 'sections');
+        coverImageKey = uploadResult.key;
+      } catch (uploadError) {
+        console.error('Error uploading subsection image:', uploadError);
+        res.status(500).json({ error: 'Failed to upload image' });
+        return;
+      }
+    }
 
     // Find the parent section (Level 1)
     let parentSection = await prisma.section.findFirst({
@@ -364,7 +473,7 @@ app.post("/:sectionName", authenticateArtist, async (req, res) => {
       data: {
         name,
         description,
-        coverImage,
+        coverImage: coverImageKey,
         parentId: parentSection.id
       }
     });
@@ -382,19 +491,36 @@ app.post("/:sectionName", authenticateArtist, async (req, res) => {
 });
 
 // POST /:sectionName/:subsectionName/add-product - Add a product under subsection
-app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, async (req, res) => {
+app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, uploadMultipleImages, async (req, res) => {
   try {
     const { sectionName, subsectionName } = req.params;
-    const { title, description, price, tags, images } = req.body;
+    const { title, description, price, tags } = req.body;
+    const imageFiles = req.files as Express.Multer.File[];
 
-    if (!sectionName || !subsectionName || !title || !price || !images || !Array.isArray(images) || images.length === 0) {
-      res.status(400).json({ error: 'Section name, subsection name, title, price, and at least one image are required' });
+    if (!sectionName || !subsectionName || !title || !price) {
+      res.status(400).json({ error: 'Section name, subsection name, title, and price are required' });
+      return;
+    }
+
+    if (!imageFiles || imageFiles.length === 0) {
+      res.status(400).json({ error: 'At least one image is required' });
       return;
     }
 
     // Convert URL parameters back to names
     const actualSectionName = sectionName.replace(/-/g, ' ');
     const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+
+    // Upload images to B2
+    let imageKeys: string[] = [];
+    try {
+      const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
+      imageKeys = uploadResults.map((result: any) => result.key);
+    } catch (uploadError) {
+      console.error('Error uploading product images:', uploadError);
+      res.status(500).json({ error: 'Failed to upload images' });
+      return;
+    }
 
     // Verify the subsection exists and belongs to the correct main section
     const subsection = await prisma.section.findFirst({
@@ -432,9 +558,9 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, async 
         description,
         price: numericPrice,
         tags: tags || [],
-        images, // This field exists in the database
+        images: imageKeys, // Use the uploaded image keys
         sectionId: subsection.id
-      } as any // Temporary type assertion until Prisma client updates
+      }
     });
 
     res.status(201).json({ 
@@ -786,6 +912,26 @@ app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, 
   } catch (error) {
     console.error('Error deleting product:', error);
     res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
+// GET /image/:key - Get signed URL for image
+app.get("/image/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    if (!key) {
+      res.status(400).json({ error: 'Image key is required' });
+      return;
+    }
+
+    // Generate signed URL (valid for 1 hour)
+    const signedUrl = await generateSignedUrl(key, 3600);
+    
+    res.json({ signedUrl });
+  } catch (error) {
+    console.error('Error generating signed URL:', error);
+    res.status(500).json({ error: 'Failed to generate signed URL' });
   }
 });
 
