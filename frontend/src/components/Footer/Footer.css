@@ -1,0 +1,130 @@
+.footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 40px 0 20px;
+  margin-top: auto;
+  color: #6c757d;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 100px;
+  flex-wrap: wrap;
+}
+
+.footer-section h3 {
+  color: #495057;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-links li {
+  margin: 0;
+}
+
+.footer-links a {
+  color: #6c757d;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+  padding: 4px 8px;
+}
+
+.footer-links a:hover {
+  color: #495057;
+  text-decoration: underline;
+}
+
+.social-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.social-icons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+  color: #6c757d;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.social-icon:hover {
+  background-color: #f8f9fa;
+  border-color: #adb5bd;
+  color: #495057;
+  transform: translateY(-2px);
+}
+
+.social-icon.facebook:hover {
+  color: #1877f2;
+  border-color: #1877f2;
+}
+
+.social-icon.instagram:hover {
+  color: #e4405f;
+  border-color: #e4405f;
+}
+
+.footer-bottom {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.footer-bottom p {
+  margin: 0;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .footer {
+    padding: 30px 0 15px;
+  }
+  
+  .social-section {
+    margin-top: 0;
+  }
+}
