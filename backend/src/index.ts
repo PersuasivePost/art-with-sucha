@@ -548,6 +548,60 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res
     // Convert URL parameters back to names
     const actualSectionName = sectionName.replace(/-/g, ' ');
     const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+    const actualProductIdentifier = id.replace(/-/g, ' ');
+
+    // Try to parse as ID first, if that fails, treat as name/slug
+    const productId = parseInt(id);
+    let existingProduct;
+
+    if (!isNaN(productId)) {
+      // Search by ID
+      existingProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          section: {
+            include: { parent: true }
+          }
+        }
+      });
+    } else {
+      // Search by title (exact match with original name or slug format)
+      existingProduct = await prisma.product.findFirst({
+        where: {
+          OR: [
+            { title: id },
+            { title: actualProductIdentifier }
+          ]
+        },
+        include: {
+          section: {
+            include: { parent: true }
+          }
+        }
+      });
+    }
+
+    if (!existingProduct) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    // Verify the product belongs to the correct section/subsection
+    const productSubsection = existingProduct.section;
+    const productMainSection = productSubsection.parent;
+
+    const isCorrectSubsection = 
+      productSubsection.name === subsectionName || 
+      productSubsection.name === actualSubsectionName;
+    
+    const isCorrectMainSection = 
+      productMainSection?.name === sectionName || 
+      productMainSection?.name === actualSectionName;
+
+    if (!isCorrectSubsection || !isCorrectMainSection) {
+      res.status(404).json({ error: 'Product not found in the specified section/subsection' });
+      return;
+    }
 
     // Build update data object with only defined values
     const updateData: any = {};
@@ -557,31 +611,22 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res
     if (tags !== undefined) updateData.tags = tags;
     if (images !== undefined) updateData.images = images;
 
-    const product = await prisma.product.updateMany({
+    // Update the product
+    const product = await prisma.product.update({
       where: {
-        id: parseInt(id),
-        section: {
-          OR: [
-            { name: subsectionName },
-            { name: actualSubsectionName }
-          ],
-          parent: {
-            OR: [
-              { name: sectionName },
-              { name: actualSectionName }
-            ]
-          }
-        }
+        id: existingProduct.id
       },
       data: updateData
     });
 
-    if (product.count === 0) {
-      res.status(404).json({ error: 'Product not found' });
-      return;
-    }
-
-    res.json({ message: 'Product updated successfully' });
+    res.json({ 
+      message: 'Product updated successfully',
+      product: {
+        id: product.id,
+        title: product.title,
+        price: product.price
+      }
+    });
   } catch (error) {
     console.error('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product' });
@@ -675,29 +720,67 @@ app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, 
     // Convert URL parameters back to names
     const actualSectionName = sectionName.replace(/-/g, ' ');
     const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+    const actualProductIdentifier = id.replace(/-/g, ' ');
 
-    const product = await prisma.product.deleteMany({
-      where: {
-        id: parseInt(id),
-        section: {
-          OR: [
-            { name: subsectionName },
-            { name: actualSubsectionName }
-          ],
-          parent: {
-            OR: [
-              { name: sectionName },
-              { name: actualSectionName }
-            ]
+    // Try to parse as ID first, if that fails, treat as name/slug
+    const productId = parseInt(id);
+    let existingProduct;
+
+    if (!isNaN(productId)) {
+      // Search by ID
+      existingProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          section: {
+            include: { parent: true }
           }
         }
-      }
-    });
+      });
+    } else {
+      // Search by title (exact match with original name or slug format)
+      existingProduct = await prisma.product.findFirst({
+        where: {
+          OR: [
+            { title: id },
+            { title: actualProductIdentifier }
+          ]
+        },
+        include: {
+          section: {
+            include: { parent: true }
+          }
+        }
+      });
+    }
 
-    if (product.count === 0) {
+    if (!existingProduct) {
       res.status(404).json({ error: 'Product not found' });
       return;
     }
+
+    // Verify the product belongs to the correct section/subsection
+    const productSubsection = existingProduct.section;
+    const productMainSection = productSubsection.parent;
+
+    const isCorrectSubsection = 
+      productSubsection.name === subsectionName || 
+      productSubsection.name === actualSubsectionName;
+    
+    const isCorrectMainSection = 
+      productMainSection?.name === sectionName || 
+      productMainSection?.name === actualSectionName;
+
+    if (!isCorrectSubsection || !isCorrectMainSection) {
+      res.status(404).json({ error: 'Product not found in the specified section/subsection' });
+      return;
+    }
+
+    // Delete the product
+    await prisma.product.delete({
+      where: {
+        id: existingProduct.id
+      }
+    });
 
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
