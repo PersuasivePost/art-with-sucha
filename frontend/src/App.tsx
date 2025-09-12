@@ -7,7 +7,7 @@ function App() {
   return (
     <Router>
       <div>
-        <h1>Art with Sucha</h1>
+        {/* <h1>Art with Sucha</h1> */}
         <AppRouter />
       </div>
     </Router>
