@@ -8,6 +8,11 @@ export default function Home() {
                 <Header />
             </header>
 
+            {/* loggedin confirmation */}
+            {localStorage.getItem('artistToken') && (
+                <p>You are logged in!</p>
+            )}
+
             <h1>Home page</h1>
 
             <footer>
