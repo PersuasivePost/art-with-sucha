@@ -1,3 +1,10 @@
+/* Reset margins to remove white space */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 header {
   width: 100%;
   font-family: "Arial", sans-serif;
@@ -7,46 +14,66 @@ header {
 .top-bar {
   background: #222430;
   color: white;
-  padding: 0.4rem 2rem;
+  padding: 0.6rem 2rem;
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 14px;
   position: relative;
+  width: 100%;
+  margin: 0;
 }
 
-.social-icons {
+.facebook-icons-header {
   position: absolute;
   left: 2rem;
   display: flex;
-  gap: 12px;
+  gap: 8px;
+  align-items: center;
 }
 
-.social-icons a {
-  display: flex;
+.facebook-icons-header a {
+  margin-left: 10px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   color: #495057;
+  text-decoration: none;
   transition: all 0.2s ease;
-  font-size: 14px;
 }
-.social-icons a:hover {
+
+.facebook-icons-header a:hover {
+  background-color: #fff;
+  border-color: #adb5bd;
+  color: #212529;
   transform: translateY(-2px);
 }
-.social-icons a.facebook:hover {
+
+.facebook-icons-header a.facebook:hover {
   color: #1877f2;
   border-color: #1877f2;
-  background: rgba(24, 119, 242, 0.1);
+  background-color: rgba(24, 119, 242, 0.1);
 }
-.social-icons a.instagram:hover {
+
+.facebook-icons-header a.instagram:hover {
   color: #e4405f;
   border-color: #e4405f;
-  background: rgba(228, 64, 95, 0.1);
+  background-color: rgba(228, 64, 95, 0.1);
+}
+
+.facebook-icons-header a svg {
+  width: 16px;
+  height: 16px;
+}
+
+.welcome-text {
+  font-weight: 500;
+  text-align: center;
 }
 
 /* Main Nav */
@@ -83,23 +110,43 @@ header {
   transition: color 0.2s;
 }
 .nav-links a:hover {
-  color: #f39c12;
+  color: #222430;
 }
 
 /* Search */
 .search-box {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  position: relative;
 }
-.search-box i {
-  font-size: 18px;
-  cursor: pointer;
-  color: #333;
-}
+
 .search-input {
   width: 200px;
-  padding: 6px 8px;
+  padding: 8px 35px 8px 12px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 20px;
+  outline: none;
+  font-size: 14px;
+  background: #fff;
+  transition: all 0.3s ease;
 }
+
+.search-input:focus {
+  border-color: #222430;
+  box-shadow: 0 0 0 2px rgba(70, 66, 124, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-icon:hover {
+  color: #222430;
+} 

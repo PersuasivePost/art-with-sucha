@@ -7,14 +7,12 @@ export default function Home() {
             <header>
                 <Header />
             </header>
-            
-            <h1>Home page </h1>
 
+            <h1>Home page</h1>
 
-
-
-
-            <Footer />
+            <footer>
+                <Footer />
+            </footer>
         </div>
     )
 }
