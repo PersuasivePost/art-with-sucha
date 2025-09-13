@@ -86,6 +86,15 @@ header {
   border-bottom: 1px solid #eee;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.login-verification {
+  margin-left: 675px;
+}
+
 .logo img {
   height: 40px;
   cursor: pointer;

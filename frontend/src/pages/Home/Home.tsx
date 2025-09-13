@@ -9,9 +9,9 @@ export default function Home() {
             </header>
 
             {/* loggedin confirmation */}
-            {localStorage.getItem('artistToken') && (
+            {/* {localStorage.getItem('artistToken') && (
                 <p>You are logged in!</p>
-            )}
+            )} */}
 
             <h1>Home page</h1>
 
