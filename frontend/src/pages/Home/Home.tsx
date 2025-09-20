@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react';
+
 import Footer from '../../components/Footer/Footer';
 import Header from '../../components/Header/Header';
+import './Home.css';
 
 export default function Home() {
     return (
@@ -16,7 +19,7 @@ export default function Home() {
             <h1>Home page</h1>
 
             <footer>
-                <Footer />
+                <Footer />  
             </footer>
         </div>
     )
