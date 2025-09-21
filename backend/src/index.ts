@@ -613,12 +613,27 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, upload
       return;
     }
 
+    // Parse tags - handle both JSON string and array formats
+    let parsedTags: string[] = [];
+    if (tags) {
+      if (typeof tags === 'string') {
+        try {
+          parsedTags = JSON.parse(tags);
+        } catch (e) {
+          // If JSON parsing fails, treat as comma-separated string
+          parsedTags = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        }
+      } else if (Array.isArray(tags)) {
+        parsedTags = tags;
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         title,
         description,
         price: numericPrice,
-        tags: tags || [],
+        tags: parsedTags,
         images: imageKeys, // Use the uploaded image keys
         sectionId: subsection.id
       }
@@ -636,15 +651,45 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, upload
 });
 
 // PUT /:sectionName - Edit section
-app.put("/:sectionName", authenticateArtist, async (req, res) => {
+app.put("/:sectionName", authenticateArtist, uploadSingleImage, async (req, res) => {
   try {
     const { sectionName } = req.params;
-    const { name, description, coverImage } = req.body;
+    const { name, description } = req.body;
+    const imageFile = req.file; // Get the uploaded file
 
     if (!sectionName) {
       res.status(400).json({ error: 'Section name is required' });
       return;
     }
+
+    let coverImageKey = null;
+
+    // If a new image is provided, upload it
+    if (imageFile) {
+      try {
+        const uploadResult = await uploadFileToB2(imageFile, 'sections');
+        coverImageKey = uploadResult.key;
+      } catch (uploadError) {
+        console.error('Error uploading section image:', uploadError);
+        res.status(500).json({ error: 'Failed to upload new image' });
+        return;
+      }
+    }
+
+    // Find the existing section to get its current coverImage if no new one is uploaded
+    const existingSection = await prisma.section.findFirst({
+      where: {
+        OR: [
+          { name: sectionName },
+          { name: sectionName.replace(/-/g, ' ') }
+        ],
+        parentId: null
+      },
+      select: { coverImage: true }
+    });
+
+    // Use the new coverImageKey if uploaded, otherwise keep the existing one
+    const finalCoverImage = coverImageKey !== null ? coverImageKey : existingSection?.coverImage;
 
     const section = await prisma.section.updateMany({
       where: { 
@@ -657,7 +702,7 @@ app.put("/:sectionName", authenticateArtist, async (req, res) => {
       data: {
         name: name || sectionName,
         description,
-        coverImage
+        coverImage: finalCoverImage === undefined ? null : finalCoverImage // Ensure it's string | null
       }
     });
 
@@ -674,10 +719,11 @@ app.put("/:sectionName", authenticateArtist, async (req, res) => {
 });
 
 // PUT /:sectionName/:subsectionName - Edit subsection
-app.put("/:sectionName/:subsectionName", authenticateArtist, async (req, res) => {
+app.put("/:sectionName/:subsectionName", authenticateArtist, uploadSingleImage, async (req, res) => {
   try {
     const { sectionName, subsectionName } = req.params;
-    const { name, description, coverImage } = req.body;
+    const { name, description } = req.body;
+    const imageFile = req.file; // Get the uploaded file
 
     if (!sectionName || !subsectionName) {
       res.status(400).json({ error: 'Section name and subsection name are required' });
@@ -687,6 +733,40 @@ app.put("/:sectionName/:subsectionName", authenticateArtist, async (req, res) =>
     // Convert URL parameters back to names
     const actualSectionName = sectionName.replace(/-/g, ' ');
     const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+
+    let coverImageKey = null;
+
+    // If a new image is provided, upload it
+    if (imageFile) {
+      try {
+        const uploadResult = await uploadFileToB2(imageFile, 'sections'); // Upload to sections folder
+        coverImageKey = uploadResult.key;
+      } catch (uploadError) {
+        console.error('Error uploading subsection image:', uploadError);
+        res.status(500).json({ error: 'Failed to upload new image' });
+        return;
+      }
+    }
+
+    // Find the existing subsection to get its current coverImage if no new one is uploaded
+    const existingSubsection = await prisma.section.findFirst({
+      where: {
+        OR: [
+          { name: subsectionName },
+          { name: actualSubsectionName }
+        ],
+        parent: {
+          OR: [
+            { name: sectionName },
+            { name: actualSectionName }
+          ]
+        }
+      },
+      select: { coverImage: true }
+    });
+
+    // Use the new coverImageKey if uploaded, otherwise keep the existing one
+    const finalCoverImage = coverImageKey !== null ? coverImageKey : existingSubsection?.coverImage;
 
     // Find and update the subsection
     const subsection = await prisma.section.updateMany({
@@ -705,7 +785,7 @@ app.put("/:sectionName/:subsectionName", authenticateArtist, async (req, res) =>
       data: {
         name: name || actualSubsectionName,
         description,
-        coverImage
+        coverImage: finalCoverImage === undefined ? null : finalCoverImage // Ensure it's string | null
       }
     });
 
@@ -722,10 +802,11 @@ app.put("/:sectionName/:subsectionName", authenticateArtist, async (req, res) =>
 });
 
 // PUT /:sectionName/:subsectionName/:id - Edit product
-app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res) => {
+app.put("/:sectionName/:subsectionName/:id", authenticateArtist, uploadMultipleImages, async (req, res) => {
   try {
     const { sectionName, subsectionName, id } = req.params;
-    const { title, description, price, tags, images } = req.body;
+    const { title, description, price, tags } = req.body as any;
+    const imageFiles = (req.files as Express.Multer.File[]) || [];
 
     if (!sectionName || !subsectionName || !id) {
       res.status(400).json({ error: 'Section name, subsection name, and product ID are required' });
@@ -739,32 +820,17 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res
 
     // Try to parse as ID first, if that fails, treat as name/slug
     const productId = parseInt(id);
-    let existingProduct;
+    let existingProduct: any;
 
     if (!isNaN(productId)) {
-      // Search by ID
       existingProduct = await prisma.product.findUnique({
         where: { id: productId },
-        include: {
-          section: {
-            include: { parent: true }
-          }
-        }
+        include: { section: { include: { parent: true } } }
       });
     } else {
-      // Search by title (exact match with original name or slug format)
       existingProduct = await prisma.product.findFirst({
-        where: {
-          OR: [
-            { title: id },
-            { title: actualProductIdentifier }
-          ]
-        },
-        include: {
-          section: {
-            include: { parent: true }
-          }
-        }
+        where: { OR: [{ title: id }, { title: actualProductIdentifier }] },
+        include: { section: { include: { parent: true } } }
       });
     }
 
@@ -773,47 +839,49 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, res
       return;
     }
 
-    // Verify the product belongs to the correct section/subsection
+    // Verify product section/subsection
     const productSubsection = existingProduct.section;
     const productMainSection = productSubsection.parent;
-
-    const isCorrectSubsection = 
-      productSubsection.name === subsectionName || 
-      productSubsection.name === actualSubsectionName;
-    
-    const isCorrectMainSection = 
-      productMainSection?.name === sectionName || 
-      productMainSection?.name === actualSectionName;
-
+    const isCorrectSubsection = productSubsection.name === subsectionName || productSubsection.name === actualSubsectionName;
+    const isCorrectMainSection = productMainSection?.name === sectionName || productMainSection?.name === actualSectionName;
     if (!isCorrectSubsection || !isCorrectMainSection) {
       res.status(404).json({ error: 'Product not found in the specified section/subsection' });
       return;
     }
 
-    // Build update data object with only defined values
+    // Parse tags
+    let parsedTags: string[] | undefined;
+    if (tags !== undefined) {
+      if (typeof tags === 'string') {
+        try { parsedTags = JSON.parse(tags); } catch (e) { parsedTags = tags.split(',').map((t: string) => t.trim()).filter(Boolean); }
+      } else if (Array.isArray(tags)) parsedTags = tags;
+    }
+
+    // Upload new images (if any) and merge with existing
+    let finalImages: string[] | undefined;
+    if (imageFiles.length > 0) {
+      try {
+        const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
+        const newKeys = uploadResults.map((r: any) => r.key);
+        finalImages = Array.isArray(existingProduct.images) ? [...existingProduct.images, ...newKeys] : newKeys;
+      } catch (uploadError) {
+        console.error('Error uploading new product images:', uploadError);
+        res.status(500).json({ error: 'Failed to upload new images' });
+        return;
+      }
+    }
+
+    // Build update object
     const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = parseFloat(price);
-    if (tags !== undefined) updateData.tags = tags;
-    if (images !== undefined) updateData.images = images;
+    if (parsedTags !== undefined) updateData.tags = parsedTags;
+    if (finalImages !== undefined) updateData.images = finalImages;
 
-    // Update the product
-    const product = await prisma.product.update({
-      where: {
-        id: existingProduct.id
-      },
-      data: updateData
-    });
+    const product = await prisma.product.update({ where: { id: existingProduct.id }, data: updateData });
 
-    res.json({ 
-      message: 'Product updated successfully',
-      product: {
-        id: product.id,
-        title: product.title,
-        price: product.price
-      }
-    });
+    res.json({ message: 'Product updated successfully', product: { id: product.id, title: product.title, price: product.price } });
   } catch (error) {
     console.error('Error updating product:', error);
     res.status(500).json({ error: 'Failed to update product' });

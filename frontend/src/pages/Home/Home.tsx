@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer/Footer';
 import Header from '../../components/Header/Header';
 import './Home.css';
+import { OrbitProgress } from 'react-loading-indicators';
 
 interface Section {
     id: number;
@@ -42,6 +43,14 @@ export default function Home() {
     // Edit Section Form State
     const [editingSection, setEditingSection] = useState<number | null>(null);
     const [editSection, setEditSection] = useState({
+        name: '',
+        description: '',
+        coverImage: null as File | null
+    });
+
+    // Add Subsection Form State
+    const [addingSubsectionTo, setAddingSubsectionTo] = useState<string | null>(null);
+    const [newSubsection, setNewSubsection] = useState({
         name: '',
         description: '',
         coverImage: null as File | null
@@ -142,8 +151,8 @@ export default function Home() {
         if (!editSection.name.trim() || editingSection === null) return;
 
         try {
-            const section = sections.find(s => s.id === editingSection);
-            if (!section) return;
+            const sectionToEdit = sections.find(s => s.id === editingSection);
+            if (!sectionToEdit) return;
 
             const formData = new FormData();
             formData.append('name', editSection.name);
@@ -152,10 +161,12 @@ export default function Home() {
                 formData.append('image', editSection.coverImage);
             }
             
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(section.name)}`, {
+            const backendUrl = 'http://localhost:5000'; // Use hardcoded URL for consistency
+            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionToEdit.name)}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
+                    // Do NOT set Content-Type for FormData - browser sets it automatically
                 },
                 body: formData
             });
@@ -165,7 +176,7 @@ export default function Home() {
                 setEditSection({ name: '', description: '', coverImage: null });
                 fetchMainSections(); // Refresh the sections
             } else {
-                console.error('Failed to update section');
+                console.error('Failed to update section', await response.json());
             }
         } catch (error) {
             console.error('Error updating section:', error);
@@ -175,6 +186,73 @@ export default function Home() {
     const handleCancelEdit = () => {
         setEditingSection(null);
         setEditSection({ name: '', description: '', coverImage: null });
+    };
+
+    const handleAddSubsection = (sectionName: string) => {
+        setAddingSubsectionTo(sectionName);
+        setNewSubsection({ name: '', description: '', coverImage: null });
+    };
+
+    const handleSaveSubsection = async () => {
+        if (!newSubsection.name.trim() || !addingSubsectionTo) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('name', newSubsection.name);
+            formData.append('description', newSubsection.description);
+            if (newSubsection.coverImage) {
+                formData.append('image', newSubsection.coverImage);
+            }
+
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(addingSubsectionTo)}/create-subsection`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                setNewSubsection({ name: '', description: '', coverImage: null });
+                setAddingSubsectionTo(null);
+                fetchMainSections(); // Refresh the sections
+            } else {
+                console.error('Failed to create subsection');
+            }
+        } catch (error) {
+            console.error('Error creating subsection:', error);
+        }
+    };
+
+    const handleCancelAddSubsection = () => {
+        setAddingSubsectionTo(null);
+        setNewSubsection({ name: '', description: '', coverImage: null });
+    };
+
+    const handleDeleteSection = async (sectionName: string) => {
+        if (!confirm(`Are you sure you want to delete the section "${sectionName}" and all its subsections? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(sectionName)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
+                }
+            });
+
+            if (response.ok) {
+                setEditingSection(null);
+                fetchMainSections(); // Refresh the sections
+            } else {
+                console.error('Failed to delete section');
+                alert('Failed to delete section. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error deleting section:', error);
+            alert('Error deleting section. Please try again.');
+        }
     };
 
     // Drag and Drop Handlers
@@ -215,11 +293,11 @@ export default function Home() {
     };
 
     const navigateToSection = (sectionName: string) => {
-        navigate(`/section/${encodeURIComponent(sectionName)}`);
+        navigate(`/${encodeURIComponent(sectionName)}`);
     };
 
     const navigateToSubsection = (sectionName: string, subsectionName: string) => {
-        navigate(`/section/${encodeURIComponent(sectionName)}/${encodeURIComponent(subsectionName)}`);
+        navigate(`/${encodeURIComponent(sectionName)}/${encodeURIComponent(subsectionName)}`);
     };
 
     // Search and Filter Functions
@@ -251,8 +329,8 @@ export default function Home() {
     if (loading) {
         return (
             <div>
-                <Header />
-                <div className="loading">Loading...</div>
+                <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+                <OrbitProgress color="#000000" size="medium" text="" textColor="#ff0000" />
                 <Footer />
             </div>
         );
@@ -260,7 +338,7 @@ export default function Home() {
 
     return (
         <div>
-            <Header />
+            <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
             
             <main className="home-container">
                 {/* Search and Filter Controls */}
@@ -367,30 +445,73 @@ export default function Home() {
                                 <div className="section-header">
                                     {editingSection === section.id ? (
                                         <div className="edit-section-form">
-                                            <h3>Edit Section</h3>
-                                            <input
-                                                type="text"
-                                                value={editSection.name}
-                                                onChange={(e) => setEditSection({...editSection, name: e.target.value})}
-                                                className="section-input"
-                                                placeholder="Section name"
-                                            />
-                                            <textarea
-                                                value={editSection.description}
-                                                onChange={(e) => setEditSection({...editSection, description: e.target.value})}
-                                                placeholder="Section description"
-                                                className="section-textarea"
-                                            />
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setEditSection({...editSection, coverImage: e.target.files?.[0] || null})}
-                                                className="section-file-input"
-                                            />
-                                            <div className="form-actions">
-                                                <button onClick={handleSaveEdit} className="save-btn">Save Changes</button>
-                                                <button onClick={handleCancelEdit} className="cancel-btn">Cancel</button>
-                                            </div>
+                                            {addingSubsectionTo === section.name ? (
+                                                <div className="add-subsection-form">
+                                                    <h3>Add New Subsection to "{section.name}"</h3>
+                                                    <input
+                                                        type="text"
+                                                        value={newSubsection.name}
+                                                        onChange={(e) => setNewSubsection({...newSubsection, name: e.target.value})}
+                                                        placeholder="Subsection name"
+                                                        className="section-input"
+                                                    />
+                                                    <textarea
+                                                        value={newSubsection.description}
+                                                        onChange={(e) => setNewSubsection({...newSubsection, description: e.target.value})}
+                                                        placeholder="Subsection description"
+                                                        className="section-textarea"
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => setNewSubsection({...newSubsection, coverImage: e.target.files?.[0] || null})}
+                                                        className="section-file-input"
+                                                    />
+                                                    <div className="form-actions">
+                                                        <button onClick={handleSaveSubsection} className="save-btn">Save Subsection</button>
+                                                        <button onClick={handleCancelAddSubsection} className="cancel-btn">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <h3>Edit Section</h3>
+                                                    <input
+                                                        type="text"
+                                                        value={editSection.name}
+                                                        onChange={(e) => setEditSection({...editSection, name: e.target.value})}
+                                                        className="section-input"
+                                                        placeholder="Section name"
+                                                    />
+                                                    <textarea
+                                                        value={editSection.description}
+                                                        onChange={(e) => setEditSection({...editSection, description: e.target.value})}
+                                                        placeholder="Section description"
+                                                        className="section-textarea"
+                                                    />
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={(e) => setEditSection({...editSection, coverImage: e.target.files?.[0] || null})}
+                                                        className="section-file-input"
+                                                    />
+                                                    <div className="form-actions">
+                                                        <button onClick={handleSaveEdit} className="save-btn">Save Changes</button>
+                                                        <button onClick={handleCancelEdit} className="cancel-btn">Cancel</button>
+                                                        <button 
+                                                            onClick={() => handleDeleteSection(section.name)} 
+                                                            className="delete-btn"
+                                                        >
+                                                            Delete Section
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleAddSubsection(section.name)} 
+                                                            className="add-subsection-btn"
+                                                        >
+                                                            + Add Subsection
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     ) : (
                                         <>
@@ -411,54 +532,42 @@ export default function Home() {
                                 </div>
                                 
                                 <div className="subsections-grid">
-                                    {/* Always show exactly 4 cards */}
-                                    {[0, 1, 2, 3].map((index) => {
-                                        if (index < displaySubsections.length) {
-                                            const subsection = displaySubsections[index];
-                                            return (
-                                                <div 
-                                                    key={subsection.id} 
-                                                    className="subsection-card"
-                                                    onClick={() => navigateToSubsection(section.name, subsection.name)}
-                                                >
-                                                    <div className="card-image">
-                                                        {subsection.coverImage ? (
-                                                            <img 
-                                                                src={subsection.coverImage} 
-                                                                alt={subsection.name}
-                                                            />
-                                                        ) : (
-                                                            <div className="placeholder-image">No Image</div>
-                                                        )}
-                                                    </div>
-                                                    <div className="card-content">
-                                                        <h3>{subsection.name}</h3>
-                                                        <span className="arrow">→</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        } else if (index === 3 && hasMore) {
-                                            return (
-                                                <div 
-                                                    key="view-all"
-                                                    className="view-all-card"
-                                                    onClick={() => navigateToSection(section.name)}
-                                                >
-                                                    <div className="view-all-content">
-                                                        <h3>View All</h3>
-                                                        <p>{subsections.length} collections</p>
-                                                        <span className="arrow">→</span>
-                                                    </div>
-                                                </div>
-                                            );
-                                        } else {
-                                            return (
-                                                <div key={`placeholder-${index}`} className="placeholder-card">
-                                                    <span>Empty Slot</span>
-                                                </div>
-                                            );
-                                        }
-                                    })}
+                                    {/* Render available subsections and a 'View All' card if there are more than 4 */}
+                                    {displaySubsections.map((subsection) => (
+                                        <div 
+                                            key={subsection.id} 
+                                            className="subsection-card"
+                                            onClick={() => navigateToSubsection(section.name, subsection.name)}
+                                        >
+                                            <div className="card-image">
+                                                {subsection.coverImage ? (
+                                                    <img 
+                                                        src={subsection.coverImage} 
+                                                        alt={subsection.name}
+                                                    />
+                                                ) : (
+                                                    <div className="placeholder-image">No Image</div>
+                                                )}
+                                            </div>
+                                            <div className="card-content">
+                                                <h3>{subsection.name}</h3>
+                                                <span className="arrow">→</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {hasMore && (
+                                        <div 
+                                            key="view-all"
+                                            className="view-all-card"
+                                            onClick={() => navigateToSection(section.name)}
+                                        >
+                                            <div className="view-all-content">
+                                                <h3>View All</h3>
+                                                <p>{subsections.length} collections</p>
+                                                <span className="arrow">→</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

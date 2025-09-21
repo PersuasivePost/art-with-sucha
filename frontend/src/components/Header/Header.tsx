@@ -1,11 +1,11 @@
 import "./Header.css";
 
-export default function Header() {
-  const handleLogout = () => {
-    localStorage.removeItem('artistToken');
-    localStorage.removeItem('artistEmail');
-    window.location.href = '/';
-  };
+interface HeaderProps {
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+}
+
+export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
 
   return (
     <header>
@@ -33,16 +33,6 @@ export default function Header() {
           <a href="#">
             <img src="/logo.png" alt="Art Gallery Logo" />
           </a>
-          <div className="login-verification">
-            {localStorage.getItem('artistToken') && (
-                <div>
-                  <p>You are logged in!</p>
-                  <button onClick={handleLogout} className="logout-button">
-                    Logout
-                  </button>
-                </div>
-            )}
-          </div>
         </div>
 
         {/* Nav Links + Search */}
@@ -56,6 +46,8 @@ export default function Header() {
               type="text"
               placeholder="Search artworks..."
               className="search-input"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
             />
             <div className="search-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
