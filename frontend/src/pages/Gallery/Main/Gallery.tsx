@@ -79,7 +79,7 @@ export default function Gallery() {
 
     const fetchSectionWithSubsections = async (sectionName: string) => {
         try {
-            const response = await fetch('FRONTEND_URL' + `${encodeURIComponent(sectionName)}`);
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(sectionName)}`);
             const data = await response.json();
             setSectionsWithSubsections(prev => ({
                 ...prev,
@@ -154,7 +154,7 @@ export default function Gallery() {
                                 <div key={subsections.id} className='subsection-card' onClick={() => handleSubsectionClick(section.name, subsections.name)}>
                                     <div className='subsection-image'>
                                         {subsections.coverImage ? (
-                                            <img src={subsections.coverImage} alt={subsections.name + ' cover image'} loading='lazy' />
+                                            <img src={`FRONTEND_URL`+subsections.coverImage} alt={subsections.name + ' cover image'} loading='lazy' />
                                         ) : (
                                             <div className='placeholder-image'>No Image</div>
                                         )}

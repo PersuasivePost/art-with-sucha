@@ -103,6 +103,48 @@ async function generateSignedUrl(key: string, expiresIn: number = 3600) {
 app.use(cors());
 app.use(express.json());
 
+// GET /sections - Get all sections with signed URLs for cover images
+app.get('/sections', async (req, res) => {
+  try {
+    const sections = await prisma.section.findMany({
+      where: {
+        parentId: null, // Only fetch main sections
+      },
+      include: {
+        children: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    const sectionsWithSignedUrls = await Promise.all(
+      sections.map(async (section) => {
+        const coverImageUrl = section.coverImage
+          ? await generateSignedUrl(section.coverImage)
+          : null;
+
+        const childrenWithSignedUrls = await Promise.all(
+          section.children.map(async (subsection) => {
+            const subsectionCoverImageUrl = subsection.coverImage
+              ? await generateSignedUrl(subsection.coverImage)
+              : null;
+            return { ...subsection, coverImage: subsectionCoverImageUrl };
+          })
+        );
+
+        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
+      })
+    );
+
+    res.json({ sections: sectionsWithSignedUrls });
+  } catch (error) {
+    console.error('Error fetching sections:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Auth route - POST /login
 app.post("/login", (req, res) => {
   try {
@@ -189,22 +231,41 @@ app.get("/", async (req, res) => {
   try {
     console.log('GET / route hit - fetching main sections'); // Debug log
     
-    const mainSections = await prisma.section.findMany({
+    const sections = await prisma.section.findMany({
       where: { parentId: null }, // Top-level sections only
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        coverImage: true,
-        createdAt: true
-      }
+      include: {
+        children: {
+          include: {
+            products: true,
+          },
+        },
+      },
     });
+
+    const sectionsWithSignedUrls = await Promise.all(
+      sections.map(async (section) => {
+        const coverImageUrl = section.coverImage
+          ? await generateSignedUrl(section.coverImage)
+          : null;
+
+        const childrenWithSignedUrls = await Promise.all(
+          section.children.map(async (subsection) => {
+            const subsectionCoverImageUrl = subsection.coverImage
+              ? await generateSignedUrl(subsection.coverImage)
+              : null;
+            return { ...subsection, coverImage: subsectionCoverImageUrl };
+          })
+        );
+
+        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
+      })
+    );
     
-    console.log('Found main sections:', mainSections); // Debug log
+    console.log('Found main sections with signed URLs:', sectionsWithSignedUrls.length); // Debug log
     
     res.json({
       message: "Art Portfolio Backend 🎨",
-      sections: mainSections
+      sections: sectionsWithSignedUrls
     });
   } catch (error) {
     console.error('Error fetching main sections:', error);

@@ -1,0 +1,54 @@
+import express from 'express';
+import prisma from '../prisma';
+import { generateSignedUrl } from '../utils/upload';
+import { Section, Product } from '@prisma/client';
+
+const router = express.Router();
+
+interface SectionWithChildren extends Section {
+  children: (Section & { products: Product[] })[];
+}
+
+// GET /sections - Get all sections with signed URLs for cover images
+router.get('/', async (req, res) => {
+  try {
+    const sections: SectionWithChildren[] = await prisma.section.findMany({
+      where: {
+        parentId: null, // Only fetch main sections
+      },
+      include: {
+        children: {
+          include: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    const sectionsWithSignedUrls = await Promise.all(
+      sections.map(async (section: SectionWithChildren) => {
+        const coverImageUrl = section.coverImage
+          ? await generateSignedUrl(section.coverImage)
+          : null;
+
+        const childrenWithSignedUrls = await Promise.all(
+          section.children.map(async (subsection) => {
+            const subsectionCoverImageUrl = subsection.coverImage
+              ? await generateSignedUrl(subsection.coverImage)
+              : null;
+            return { ...subsection, coverImage: subsectionCoverImageUrl };
+          })
+        );
+
+        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
+      })
+    );
+
+    res.json({ sections: sectionsWithSignedUrls });
+  } catch (error) {
+    console.error('Error fetching sections:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
