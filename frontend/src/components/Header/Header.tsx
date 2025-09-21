@@ -1,6 +1,12 @@
 import "./Header.css";
 
 export default function Header() {
+  const handleLogout = () => {
+    localStorage.removeItem('artistToken');
+    localStorage.removeItem('artistEmail');
+    window.location.href = '/';
+  };
+
   return (
     <header>
       {/* Top Bar */}
@@ -29,7 +35,12 @@ export default function Header() {
           </a>
           <div className="login-verification">
             {localStorage.getItem('artistToken') && (
-                <p>You are logged in!</p>
+                <div>
+                  <p>You are logged in!</p>
+                  <button onClick={handleLogout} className="logout-button">
+                    Logout
+                  </button>
+                </div>
             )}
           </div>
         </div>
