@@ -82,7 +82,12 @@ async function generateSignedUrl(key, expiresIn = 3600) {
     return await getSignedUrl(s3Client, command, { expiresIn });
 }
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+}));
 app.use(express.json());
 // GET /sections - Get all sections with signed URLs for cover images
 app.get('/sections', async (req, res) => {
@@ -256,9 +261,36 @@ app.get("/:sectionName", async (req, res) => {
             res.status(404).json({ error: 'Section not found' });
             return;
         }
+        // Generate signed URLs for subsection cover images and product images
+        const childrenWithSignedUrls = await Promise.all(mainSection.children.map(async (subsection) => {
+            const subsectionCoverImageUrl = subsection.coverImage
+                ? await generateSignedUrl(subsection.coverImage)
+                : null;
+            // Generate signed URLs for products in this subsection
+            const productsWithSignedUrls = await Promise.all((subsection.products || []).map(async (product) => {
+                const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
+                    return await generateSignedUrl(imageKey);
+                }));
+                return { ...product, images: signedImageUrls };
+            }));
+            return {
+                ...subsection,
+                coverImage: subsectionCoverImageUrl,
+                products: productsWithSignedUrls
+            };
+        }));
+        // Generate signed URL for main section cover image (if exists)
+        const mainSectionCoverImageUrl = mainSection.coverImage
+            ? await generateSignedUrl(mainSection.coverImage)
+            : null;
+        const sectionWithSignedUrls = {
+            ...mainSection,
+            coverImage: mainSectionCoverImageUrl,
+            children: childrenWithSignedUrls
+        };
         res.json({
-            section: mainSection,
-            subsections: mainSection.children || []
+            section: sectionWithSignedUrls,
+            subsections: childrenWithSignedUrls
         });
     }
     catch (error) {
@@ -306,9 +338,16 @@ app.get("/:sectionName/:subsectionName", async (req, res) => {
             res.status(404).json({ error: 'Subsection not found' });
             return;
         }
+        // Generate signed URLs for product images
+        const productsWithSignedUrls = await Promise.all((subsection.products || []).map(async (product) => {
+            const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
+                return await generateSignedUrl(imageKey);
+            }));
+            return { ...product, images: signedImageUrls };
+        }));
         res.json({
             subsection: subsection,
-            products: subsection.products || [],
+            products: productsWithSignedUrls,
             mainSection: subsection.parent || null
         });
     }
@@ -324,10 +363,16 @@ app.get("/:sectionName/:subsectionName/:productId", async (req, res) => {
         // Convert URL parameters back to names
         const actualSectionName = sectionName.replace(/-/g, ' ');
         const actualSubsectionName = subsectionName.replace(/-/g, ' ');
+        // Validate productId
+        const productIdNum = parseInt(productId);
+        if (isNaN(productIdNum)) {
+            res.status(400).json({ error: 'Invalid product ID' });
+            return;
+        }
         // Find the product and verify it belongs to the correct section hierarchy
         const product = await prisma.product.findFirst({
             where: {
-                id: parseInt(productId),
+                id: productIdNum,
                 section: {
                     OR: [
                         { name: subsectionName },
@@ -353,8 +398,13 @@ app.get("/:sectionName/:subsectionName/:productId", async (req, res) => {
             res.status(404).json({ error: 'Product not found' });
             return;
         }
+        // Generate signed URLs for product images
+        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
+            return await generateSignedUrl(imageKey);
+        }));
+        const productWithSignedUrls = { ...product, images: signedImageUrls };
         res.json({
-            product,
+            product: productWithSignedUrls,
             breadcrumb: {
                 mainSection: product.section.parent?.name,
                 subsection: product.section.name,
@@ -476,33 +526,106 @@ app.post("/:sectionName", authenticateArtist, uploadSingleImage, async (req, res
         res.status(500).json({ error: 'Failed to create subsection' });
     }
 });
+// POST /:sectionName/create-subsection - Add a sub-section under sectionName (Alternative endpoint)
+app.post("/:sectionName/create-subsection", authenticateArtist, uploadSingleImage, async (req, res) => {
+    try {
+        const { sectionName } = req.params;
+        const { name, description } = req.body;
+        const imageFile = req.file;
+        if (!sectionName || !name) {
+            res.status(400).json({ error: 'Section name and subsection name are required' });
+            return;
+        }
+        // Convert URL parameter back to section name
+        const actualSectionName = sectionName.replace(/-/g, ' ');
+        let coverImageKey = null;
+        // Upload image if provided
+        if (imageFile) {
+            try {
+                const uploadResult = await uploadFileToB2(imageFile, 'sections');
+                coverImageKey = uploadResult.key;
+            }
+            catch (uploadError) {
+                console.error('Error uploading subsection image:', uploadError);
+                res.status(500).json({ error: 'Failed to upload image' });
+                return;
+            }
+        }
+        // Find the parent section (Level 1)
+        let parentSection = await prisma.section.findFirst({
+            where: {
+                OR: [
+                    { name: sectionName },
+                    { name: actualSectionName }
+                ],
+                parentId: null
+            }
+        });
+        // If parent section doesn't exist, create it first
+        if (!parentSection) {
+            parentSection = await prisma.section.create({
+                data: {
+                    name: actualSectionName,
+                    description: `${actualSectionName} section`,
+                    parentId: null
+                }
+            });
+        }
+        // Create the subsection (Level 2)
+        const subsection = await prisma.section.create({
+            data: {
+                name,
+                description,
+                coverImage: coverImageKey,
+                parentId: parentSection.id
+            }
+        });
+        res.status(201).json({
+            message: 'Subsection created successfully',
+            subsection,
+            slug: createSlug(name), // Return the slug for frontend use
+            parentSlug: createSlug(parentSection.name)
+        });
+    }
+    catch (error) {
+        console.error('Error creating subsection:', error);
+        res.status(500).json({ error: 'Failed to create subsection' });
+    }
+});
 // POST /:sectionName/:subsectionName/add-product - Add a product under subsection
 app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, uploadMultipleImages, async (req, res) => {
     try {
         const { sectionName, subsectionName } = req.params;
         const { title, description, price, tags } = req.body;
         const imageFiles = req.files;
+        console.log('Add product request received:');
+        console.log('Params:', { sectionName, subsectionName });
+        console.log('Body:', { title, description, price, tags });
+        console.log('Files:', imageFiles ? imageFiles.length : 0);
+        if (imageFiles) {
+            imageFiles.forEach((file, index) => {
+                console.log(`File ${index}:`, { name: file.originalname, size: file.size, mimetype: file.mimetype });
+            });
+        }
         if (!sectionName || !subsectionName || !title || !price) {
             res.status(400).json({ error: 'Section name, subsection name, title, and price are required' });
-            return;
-        }
-        if (!imageFiles || imageFiles.length === 0) {
-            res.status(400).json({ error: 'At least one image is required' });
             return;
         }
         // Convert URL parameters back to names
         const actualSectionName = sectionName.replace(/-/g, ' ');
         const actualSubsectionName = subsectionName.replace(/-/g, ' ');
-        // Upload images to B2
+        // Upload images to B2 if provided
         let imageKeys = [];
-        try {
-            const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
-            imageKeys = uploadResults.map((result) => result.key);
-        }
-        catch (uploadError) {
-            console.error('Error uploading product images:', uploadError);
-            res.status(500).json({ error: 'Failed to upload images' });
-            return;
+        if (imageFiles && imageFiles.length > 0) {
+            try {
+                const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
+                imageKeys = uploadResults.map((result) => result.key);
+            }
+            catch (uploadError) {
+                console.error('Error uploading product images:', uploadError);
+                res.status(500).json({ error: 'Failed to upload images' });
+                return;
+            }
         }
         // Verify the subsection exists and belongs to the correct main section
         const subsection = await prisma.section.findFirst({
@@ -556,9 +679,14 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, upload
                 sectionId: subsection.id
             }
         });
+        // Generate signed URLs for the created product images
+        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
+            return await generateSignedUrl(imageKey);
+        }));
+        const productWithSignedUrls = { ...product, images: signedImageUrls };
         res.status(201).json({
             message: 'Product created successfully',
-            product,
+            product: productWithSignedUrls,
             slug: createSlug(title)
         });
     }
@@ -786,7 +914,15 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, uploadMultipleI
         if (finalImages !== undefined)
             updateData.images = finalImages;
         const product = await prisma.product.update({ where: { id: existingProduct.id }, data: updateData });
-        res.json({ message: 'Product updated successfully', product: { id: product.id, title: product.title, price: product.price } });
+        // Generate signed URLs for the updated product images
+        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
+            return await generateSignedUrl(imageKey);
+        }));
+        const productWithSignedUrls = { ...product, images: signedImageUrls };
+        res.json({
+            message: 'Product updated successfully',
+            product: productWithSignedUrls
+        });
     }
     catch (error) {
         console.error('Error updating product:', error);

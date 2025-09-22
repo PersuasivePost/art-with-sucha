@@ -41,6 +41,19 @@ export default function SectionView() {
     const [sortBy, setSortBy] = useState('name'); // 'name', 'date'
     const [filterBy, setFilterBy] = useState('all'); // 'all', 'with-image', 'without-image'
 
+    // Modal states for add/edit subsection
+    const [showAddSubsection, setShowAddSubsection] = useState(false);
+    const [editingSubsection, setEditingSubsection] = useState<Subsection | null>(null);
+    const [newSubsection, setNewSubsection] = useState({ 
+        name: '', 
+        description: '', 
+        coverImage: null as File | null 
+    });
+    const [submittingAdd, setSubmittingAdd] = useState(false);
+    const [submittingEdit, setSubmittingEdit] = useState(false);
+    const [addError, setAddError] = useState('');
+    const [editError, setEditError] = useState('');
+
     useEffect(() => {
         const token = localStorage.getItem('artistToken');
         setIsArtist(!!token);
@@ -69,8 +82,13 @@ export default function SectionView() {
     }
 
     const handleEditSubsection = (subsection: Subsection) => {
-        // TODO: Implement edit subsection modal
-        console.log('Edit subsection:', subsection);
+        setEditingSubsection(subsection);
+        setNewSubsection({
+            name: subsection.name,
+            description: subsection.description,
+            coverImage: null // Reset file input
+        });
+        setEditError('');
     };
 
     const handleDeleteSubsection = async (subsectionName: string) => {
@@ -100,9 +118,88 @@ export default function SectionView() {
     };
 
     const handleAddSubsection = () => {
-    // TODO: Implement add subsection modal
-    console.log('Add new subsection to:', sectionName);
-  };
+        setShowAddSubsection(true);
+        setNewSubsection({ name: '', description: '', coverImage: null });
+        setAddError('');
+    };
+
+    const handleAddSubsectionSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmittingAdd(true);
+        setAddError('');
+
+        try {
+            const formData = new FormData();
+            formData.append('name', newSubsection.name);
+            formData.append('description', newSubsection.description);
+            if (newSubsection.coverImage) {
+                formData.append('image', newSubsection.coverImage);
+            }
+
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/create-subsection`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                setShowAddSubsection(false);
+                setNewSubsection({ name: '', description: '', coverImage: null });
+                fetchSection(); // Refresh the section data
+            } else {
+                const errorText = await response.text();
+                setAddError(errorText || 'Failed to create subsection');
+            }
+        } catch (error) {
+            console.error('Error creating subsection:', error);
+            setAddError('Error creating subsection. Please try again.');
+        } finally {
+            setSubmittingAdd(false);
+        }
+    };
+
+    const handleEditSubsectionSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingSubsection) return;
+        
+        setSubmittingEdit(true);
+        setEditError('');
+
+        try {
+            const formData = new FormData();
+            formData.append('name', newSubsection.name);
+            formData.append('description', newSubsection.description);
+            if (newSubsection.coverImage) {
+                formData.append('image', newSubsection.coverImage);
+            }
+
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
+                },
+                body: formData
+            });
+
+            if (response.ok) {
+                setEditingSubsection(null);
+                setNewSubsection({ name: '', description: '', coverImage: null });
+                fetchSection(); // Refresh the section data
+            } else {
+                const errorText = await response.text();
+                setEditError(errorText || 'Failed to update subsection');
+            }
+        } catch (error) {
+            console.error('Error updating subsection:', error);
+            setEditError('Error updating subsection. Please try again.');
+        } finally {
+            setSubmittingEdit(false);
+        }
+    }
 
     const handleBackToHome = () => {
         navigate('/');
@@ -283,6 +380,149 @@ export default function SectionView() {
         </div>
       )}
     </div>
+
+    {/* Add Subsection Modal */}
+    {showAddSubsection && (
+      <div className="product-modal-overlay">
+        <div className="add-product-modal">
+          <button 
+            className="close-modal-btn"
+            onClick={() => setShowAddSubsection(false)}
+          >
+            ×
+          </button>
+          <div className="modal-content">
+            <h2>Add New Subsection</h2>
+            {addError && <div className="error-message">{addError}</div>}
+            <form onSubmit={handleAddSubsectionSubmit} className="add-product-form">
+              <div className="form-group">
+                <label htmlFor="subsection-name">Name *</label>
+                <input
+                  id="subsection-name"
+                  type="text"
+                  value={newSubsection.name}
+                  onChange={(e) => setNewSubsection({ ...newSubsection, name: e.target.value })}
+                  required
+                  disabled={submittingAdd}
+                  placeholder="Enter subsection name"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="subsection-description">Description</label>
+                <textarea
+                  id="subsection-description"
+                  value={newSubsection.description}
+                  onChange={(e) => setNewSubsection({ ...newSubsection, description: e.target.value })}
+                  disabled={submittingAdd}
+                  placeholder="Enter subsection description"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="subsection-image">Cover Image</label>
+                <input
+                  id="subsection-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNewSubsection({ ...newSubsection, coverImage: e.target.files?.[0] || null })}
+                  disabled={submittingAdd}
+                />
+                <small>Choose a cover image for this subsection</small>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddSubsection(false)}
+                  disabled={submittingAdd}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingAdd || !newSubsection.name.trim()}
+                >
+                  {submittingAdd ? 'Adding...' : 'Add Subsection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Subsection Modal */}
+    {editingSubsection && (
+      <div className="product-modal-overlay">
+        <div className="edit-product-modal">
+          <button 
+            className="close-modal-btn"
+            onClick={() => setEditingSubsection(null)}
+          >
+            ×
+          </button>
+          <div className="modal-content">
+            <h2>Edit Subsection</h2>
+            {editError && <div className="error-message">{editError}</div>}
+            <form onSubmit={handleEditSubsectionSubmit} className="edit-product-form">
+              <div className="form-group">
+                <label htmlFor="edit-subsection-name">Name *</label>
+                <input
+                  id="edit-subsection-name"
+                  type="text"
+                  value={newSubsection.name}
+                  onChange={(e) => setNewSubsection({ ...newSubsection, name: e.target.value })}
+                  required
+                  disabled={submittingEdit}
+                  placeholder="Enter subsection name"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="edit-subsection-description">Description</label>
+                <textarea
+                  id="edit-subsection-description"
+                  value={newSubsection.description}
+                  onChange={(e) => setNewSubsection({ ...newSubsection, description: e.target.value })}
+                  disabled={submittingEdit}
+                  placeholder="Enter subsection description"
+                />
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="edit-subsection-image">Cover Image</label>
+                <input
+                  id="edit-subsection-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNewSubsection({ ...newSubsection, coverImage: e.target.files?.[0] || null })}
+                  disabled={submittingEdit}
+                />
+                <small>Choose a new cover image (leave empty to keep current image)</small>
+              </div>
+
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingSubsection(null)}
+                  disabled={submittingEdit}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingEdit || !newSubsection.name.trim()}
+                >
+                  {submittingEdit ? 'Updating...' : 'Update Subsection'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    )}
+
     <Footer />
     </div>
   );

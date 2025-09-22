@@ -158,6 +158,16 @@ export default function ProductsView() {
     e.preventDefault();
     setAddError(null);
     setSubmittingAdd(true);
+    
+    console.log('Add product form data:', {
+      title: newProduct.title,
+      description: newProduct.description,
+      price: newProduct.price,
+      tags: newProduct.tags,
+      images: newProduct.images,
+      imageCount: newProduct.images.length
+    });
+    
     try {
       const token = localStorage.getItem('artistToken');
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -171,9 +181,13 @@ export default function ProductsView() {
       formData.append('subsectionName', subsectionName!);
       
       // Add images
-      newProduct.images.forEach((image) => {
+      console.log('Adding images to form data:', newProduct.images.length);
+      newProduct.images.forEach((image, index) => {
+        console.log(`Adding image ${index}:`, image.name, image.size);
         formData.append('images', image);
       });
+      
+      console.log('Sending request to:', `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`);
       
       const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`, {
         method: 'POST',
@@ -183,13 +197,17 @@ export default function ProductsView() {
         body: formData
       });
       
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Product created successfully:', result);
         setShowAddProduct(false);
         setNewProduct({ title: '', description: '', price: '', tags: [], images: [] });
         fetchProducts(); // Refresh the products
       } else {
         const errText = await response.text();
-        console.error('Add product failed:', errText);
+        console.error('Add product failed:', response.status, errText);
         setAddError(errText || 'Failed to add product');
       }
     } catch (error: any) {
@@ -204,6 +222,17 @@ export default function ProductsView() {
     e.preventDefault();
     setEditError(null);
     setSubmittingEdit(true);
+    
+    console.log('Edit product form data:', {
+      title: editProduct.title,
+      description: editProduct.description,
+      price: editProduct.price,
+      tags: editProduct.tags,
+      images: editProduct.images,
+      imageCount: editProduct.images.length,
+      editingProduct: editingProduct
+    });
+    
     try {
       const token = localStorage.getItem('artistToken');
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
@@ -215,9 +244,13 @@ export default function ProductsView() {
       formData.append('tags', JSON.stringify(editProduct.tags));
       
       // Add new images if any
-      editProduct.images.forEach((image) => {
+      console.log('Adding new images to form data:', editProduct.images.length);
+      editProduct.images.forEach((image, index) => {
+        console.log(`Adding new image ${index}:`, image.name, image.size);
         formData.append('images', image);
       });
+      
+      console.log('Sending PUT request to:', `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`);
       
       const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`, {
         method: 'PUT',
@@ -227,13 +260,17 @@ export default function ProductsView() {
         body: formData
       });
       
+      console.log('Edit response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Product updated successfully:', result);
         setEditingProduct(null);
         setEditProduct({ title: '', description: '', price: '', tags: [], images: [] });
         fetchProducts(); // Refresh the products
       } else {
         const errText = await response.text();
-        console.error('Update product failed:', errText);
+        console.error('Update product failed:', response.status, errText);
         setEditError(errText || 'Failed to update product');
       }
     } catch (error: any) {
