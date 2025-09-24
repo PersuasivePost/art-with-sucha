@@ -14,10 +14,9 @@
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
   gap: 20px;
-  flex-wrap: wrap;
 }
 
 .footer-section h3 {
@@ -32,8 +31,8 @@
   margin: 0;
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 12px;
+  justify-content: center;
+  gap: 16px;
 }
 
 .footer-links li {
@@ -98,12 +97,6 @@
   padding-top: 20px;
   border-top: 1px solid #e9ecef;
   text-align: center;
-}
-
-@media (max-width: 600px){
-  .footer-container{ flex-direction: column; align-items:center }
-  .footer-section{ width:100%; text-align:center }
-  .footer-links{ justify-content:center }
 }
 
 .footer-bottom p {
