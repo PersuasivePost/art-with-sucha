@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import Header from '../../../components/Header/Header'
 import Footer from '../../../components/Footer/Footer'
 import './SectionView.css'
@@ -201,9 +201,7 @@ export default function SectionView() {
         }
     }
 
-    const handleBackToHome = () => {
-        navigate('/');
-    };
+  // navigation handled by Link in the UI
 
     // Search and Filter Functions
     const filteredSubsections = section?.children.filter(subsection => {
@@ -249,25 +247,27 @@ export default function SectionView() {
     <div>
     <div className="section-view-container">
         <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-      <div className="section-header">
-        <button className="back-btn" onClick={handleBackToHome}>
-          ← Back to Home
-        </button>
-        
-        <div className="section-info">
-          <h1 className="section-title">{section.name}</h1>
-          {section.description && (
-            <p className="section-description">{section.description}</p>
-          )}
+      <div className="section-top">
+        <h1 className="section-title">{section.name}</h1>
+        {section.description && (
+          <p className="section-description">{section.description}</p>
+        )}
+      </div>
+
+      <div className="section-controls">
+        <div className="controls-left">
+          <Link to="/" className="back-btn">← Back to Home</Link>
         </div>
 
-        {isArtist && (
-          <div className="section-actions">
-            <button className="add-subsection-btn" onClick={handleAddSubsection}>
-              + Add Subsection
-            </button>
-          </div>
-        )}
+        <div className="controls-right">
+          {isArtist && (
+            <div className="section-actions">
+              <button className="add-subsection-btn" onClick={handleAddSubsection}>
+                + Add Subsection
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter Controls */}

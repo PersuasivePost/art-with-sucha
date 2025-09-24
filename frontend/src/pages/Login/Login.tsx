@@ -52,7 +52,13 @@ export default function Login() {
 
     return (
         <div className="login-container">
-            <div className="background-image"></div>
+            <div className="background-image">
+                {/* Use picture to serve a mobile-specific image when viewport is narrow */}
+                <picture>
+                    <source media="(max-width: 600px)" srcSet="/image.png" />
+                    <img src="/bg8t.png" alt="Background" />
+                </picture>
+            </div>
             <div className="login-content">
                 <form onSubmit={handleSubmit} className="login-form">
                     <input

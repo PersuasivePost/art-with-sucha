@@ -1,5 +1,6 @@
 import "./Header.css";
 import { useState, useEffect } from "react";
+import { Link } from 'react-router-dom';
 
 interface HeaderProps {
   searchTerm: string;
@@ -9,6 +10,7 @@ interface HeaderProps {
 export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [artistEmail, setArtistEmail] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('artistToken');
@@ -47,12 +49,11 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
         <div className="auth-status">
           {isLoggedIn ? (
             <>
-              <span className="logged-in-text">You are logged in{artistEmail ? ` as ${artistEmail}` : ''}</span>
-              <button className="logout-btn" onClick={handleLogout}>Logout</button>
+              {/* Show only the artist email and logout button to keep header compact */}
+              {artistEmail ? <span className="artist-email">{artistEmail}</span> : null}
+              <button className="logout-button" onClick={handleLogout}>Logout</button>
             </>
-          ) : (
-            <a href="/login" className="login-link">Login</a>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -60,16 +61,27 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
       <div className="main-nav">
         {/* Logo */}
         <div className="logo">
-          <a href="#">
+          <Link to="/">
             <img src="/logo.png" alt="Art Gallery Logo" />
-          </a>
+          </Link>
         </div>
 
         {/* Nav Links + Search */}
         <div className="nav-right">
-          <nav className="nav-links">
-            <a href="#about">About Us</a>
-            <a href="#contact">Contact Us</a>
+          <button
+            aria-label="Toggle menu"
+            className="menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {/* simple hamburger */}
+            <span style={{display:'inline-block',width:20,height:2,background:'#333',marginBottom:4}}></span>
+            <span style={{display:'inline-block',width:20,height:2,background:'#333',marginBottom:4}}></span>
+            <span style={{display:'inline-block',width:20,height:2,background:'#333'}}></span>
+          </button>
+
+          <nav className={`nav-links ${menuOpen ? 'open' : ''}`}>
+            <Link to="/about-us">About Us</Link>
+            <Link to="/contact-us">Contact Us</Link>
           </nav>
           <div className="search-box">
             <input

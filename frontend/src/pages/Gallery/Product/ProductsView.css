@@ -1,12 +1,47 @@
 /* Adimanav.com Inspired Design - Clean E-commerce Style */
 
 .products-view-container {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0 12px; /* small side padding to match SectionView */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   background: #ffffff;
   min-height: 100vh;
+}
+
+/* Section top and controls to match SectionView layout */
+.section-top {
+  margin: 0 6px 8px 6px;
+  padding: 8px 12px;
+}
+
+.section-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0 6px 20px 6px;
+  padding: 8px 12px;
+  background: #f8f8f8;
+  border-radius: 6px;
+}
+
+.subsection-meta { text-align: center; flex: 1; }
+
+/* Use the same section title/description styles as SectionView */
+.section-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000;
+  margin: 0 0 8px 0;
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+
+.section-description {
+  color: #666;
+  font-size: 16px;
+  margin: 0;
 }
 
 .loading {
@@ -100,7 +135,7 @@
 .search-filter-controls {
   background: #ffffff;
   padding: 20px;
-  margin: 0 20px 30px;
+  margin: 0 6px 30px 6px;
   display: flex;
   gap: 16px;
   align-items: center;
@@ -154,7 +189,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  margin: 0 20px 60px;
+  margin: 0 6px 60px 6px;
   min-height: 280px;
 }
 
@@ -398,6 +433,20 @@
   display: flex;
   gap: 10px;
   overflow-x: auto;
+}
+
+/* Additional responsive tweaks */
+@media (max-width: 900px){
+  .products-grid{ grid-template-columns: repeat(2,1fr) }
+  .product-modal{ max-width: 720px }
+  .main-image{ height: 320px }
+}
+
+@media (max-width: 480px){
+  .products-grid{ grid-template-columns: 1fr }
+  .modal-content{ padding:12px; gap:12px }
+  .main-image{ height: auto; max-height:50vh }
+  .nav-arrow{ width:36px; height:36px }
 }
 
 .thumbnail {

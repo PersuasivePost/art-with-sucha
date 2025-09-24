@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import Header from '../../../components/Header/Header';
 import Footer from '../../../components/Footer/Footer';
 import './ProductsView.css';
@@ -112,9 +112,7 @@ export default function ProductsView() {
     }
   };
 
-  const handleBackToSection = () => {
-    navigate(`/${sectionName}`);
-  };
+  // navigation to parent subsection handled by Link in the UI
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product.id);
@@ -356,28 +354,28 @@ export default function ProductsView() {
   return (
     <div className="products-view-container">
       <Header searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-      <div className="products-header">
-        <button className="back-btn" onClick={handleBackToSection}>
-          ← Back to {sectionName}
-        </button>
-        
-        <div className="subsection-info">
-          <h1 className="subsection-title">{subsection.name}</h1>
-          {subsection.description && (
-            <p className="subsection-description">{subsection.description}</p>
-          )}
-          <div className="product-count">
-            {subsection.products?.length || 0} items
-          </div>
+      <div className="section-top">
+        <h1 className="section-title">{subsection.name}</h1>
+        {subsection.description && (
+          <p className="section-description">{subsection.description}</p>
+        )}
+        <div className="product-count">{subsection.products?.length || 0} items</div>
+      </div>
+
+      <div className="section-controls">
+        <div className="controls-left">
+          <Link to={`/${sectionName}`} className="back-btn">← Back to {sectionName}</Link>
         </div>
 
-        {isArtist && (
-          <div className="subsection-actions">
-            <button className="add-product-btn" onClick={() => setShowAddProduct(true)}>
-              + Add Product
-            </button>
-          </div>
-        )}
+        <div className="controls-right">
+          {isArtist && (
+            <div className="section-actions">
+              <button className="add-product-btn" onClick={() => setShowAddProduct(true)}>
+                + Add Product
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search and Filter Controls */}
