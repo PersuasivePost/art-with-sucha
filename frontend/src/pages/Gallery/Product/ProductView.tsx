@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../../../components/Header/Header';
+import Footer from '../../../components/Footer/Footer';
 import './ProductsView.css';
 
 interface Product {
@@ -307,10 +308,31 @@ export default function ProductsView() {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    // Format as Indian Rupees with rupee symbol
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR',
+      maximumFractionDigits: 2
     }).format(price);
+  };
+
+  // Resolve image entries that might be signed URLs or storage keys or objects
+  const getImageUrl = (img: string | { signedUrl?: string; url?: string } | undefined) => {
+    if (!img) return '';
+    // If it's an object with signedUrl or url
+    if (typeof img === 'object') {
+      // @ts-ignore
+      if (img.signedUrl) return (img as any).signedUrl;
+      // @ts-ignore
+      if (img.url) return (img as any).url;
+      return '';
+    }
+    // If it's a string and already a full URL
+    if (typeof img === 'string') {
+      if (img.startsWith('http')) return img;
+      return `${import.meta.env.VITE_BACKEND_URL}/image/${img}`;
+    }
+    return '';
   };
 
   if (loading) {
@@ -363,6 +385,8 @@ export default function ProductsView() {
           <div className="search-bar">
               <input
                   type="text"
+          id="product-search"
+          name="product-search"
                   placeholder="Search products, descriptions, or tags..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -404,13 +428,13 @@ export default function ProductsView() {
                 className="product-image"
                 onClick={() => handleProductClick(product)}
                 >
-                {product.images && product.images.length > 0 ? (
-                    <img 
-                    src={`${import.meta.env.VITE_BACKEND_URL}/image/${product.images[0]}`}
-                    alt={product.title}
-                    loading="lazy"
-                    />
-                ) : (
+        {product.images && product.images.length > 0 ? (
+          <img 
+          src={getImageUrl(product.images[0])}
+          alt={product.title}
+          loading="lazy"
+          />
+        ) : (
                     <div className="placeholder-image">No Image</div>
                 )}
                 </div>
@@ -485,7 +509,7 @@ export default function ProductsView() {
                 {selectedProduct.images && selectedProduct.images.length > 0 ? (
                   <div className="image-gallery">
                     <img 
-                      src={`${import.meta.env.VITE_BACKEND_URL}/image/${selectedProduct.images[currentImageIndex]}`}
+                      src={getImageUrl(selectedProduct.images[currentImageIndex])}
                       alt={selectedProduct.title}
                       className="main-image"
                     />
@@ -593,7 +617,7 @@ export default function ProductsView() {
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="price">Price (USD) *</label>
+                  <label htmlFor="price">Price (INR) *</label>
                   <input
                     type="number"
                     id="price"
@@ -628,6 +652,8 @@ export default function ProductsView() {
                       ))}
                       <input
                         type="text"
+                        id="add-tags-input"
+                        name="add-tags"
                         className="tags-input-field"
                         placeholder={newProduct.tags.length === 0 ? "Add tags (press Enter or comma to add)" : ""}
                         onKeyDown={(e) => {
@@ -727,7 +753,7 @@ export default function ProductsView() {
                 </div>
                 
                 <div className="form-group">
-                  <label htmlFor="edit-price">Price (USD) *</label>
+                  <label htmlFor="edit-price">Price (INR) *</label>
                   <input
                     type="number"
                     id="edit-price"
@@ -761,6 +787,8 @@ export default function ProductsView() {
                       ))}
                       <input
                         type="text"
+                        id="edit-tags-input"
+                        name="edit-tags"
                         className="tags-input-field"
                         placeholder={editProduct.tags.length === 0 ? "Add tags (press Enter or comma to add)" : ""}
                         onKeyDown={(e) => {
@@ -818,6 +846,7 @@ export default function ProductsView() {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

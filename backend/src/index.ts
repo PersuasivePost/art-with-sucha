@@ -108,6 +108,24 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Lightweight health endpoint to quickly verify the server is alive
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Simple request logger to help debug incoming requests and where they hang
+app.use((req, res, next) => {
+  const start = Date.now();
+  console.log(`--> ${req.method} ${req.originalUrl} at ${new Date().toISOString()}`);
+  res.on('finish', () => {
+    console.log(`<-- ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+  });
+  res.on('error', (err) => {
+    console.error(`Response error for ${req.method} ${req.originalUrl}:`, err);
+  });
+  next();
+});
+
 // GET /sections - Get all sections with signed URLs for cover images
 app.get('/sections', async (req, res) => {
   try {
@@ -230,6 +248,45 @@ const createSlug = (text: string): string => {
 };
 
 // ====== PUBLIC ROUTES (No Auth Required) ======
+
+// GET /image/:key - Stream image bytes for image keys (supports keys with slashes)
+// This handler is placed before dynamic routes so it won't be shadowed by 
+// the `/:sectionName` catch-alls.
+app.get(/^\/image\/(.+)$/, async (req, res) => {
+  // Instead of performing a server-side GetObject (which can fail in some B2 setups),
+  // generate a short-lived presigned URL and redirect the client to it. Browsers
+  // will then fetch the image directly from Backblaze (presigned GET) which
+  // avoids CORB and streaming edge-cases.
+  const key = (req.params as any)[0] || '';
+  if (!key) {
+    res.status(400).json({ error: 'Image key is required' });
+    return;
+  }
+
+  try {
+    console.log(`/image/:key - redirecting to presigned URL for key=${key}`);
+    const signedUrl = await generateSignedUrl(key, 600); // 10 minutes
+    // Use a 302 redirect so the browser will follow to the signed URL for the image
+    res.redirect(302, signedUrl);
+  } catch (err: any) {
+    console.error('Error generating signed URL for image key:', key, err);
+    res.status(500).json({ error: 'Failed to generate image URL' });
+  }
+});
+
+// DEBUG: Return a signed URL for a given key (for quick testing)
+app.get(/^\/debug\/signed\/(.+)$/, async (req, res) => {
+  const key = (req.params as any)[0] || '';
+  if (!key) return res.status(400).json({ error: 'Key required' });
+  try {
+    console.log(`Generating signed URL for debug key='${key}'`);
+    const url = await generateSignedUrl(key, 600);
+    res.json({ signedUrl: url });
+  } catch (err) {
+    console.error('Error generating signed URL for debug:', err);
+    res.status(500).json({ error: 'Failed to generate signed URL' });
+  }
+});
 
 // GET / - Get all main sections (Level 1)
 app.get("/", async (req, res) => {
@@ -1216,27 +1273,15 @@ app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, 
   }
 });
 
-// GET /image/:key - Get signed URL for image
-app.get("/image/:key", async (req, res) => {
-  try {
-    const { key } = req.params;
-    
-    if (!key) {
-      res.status(400).json({ error: 'Image key is required' });
-      return;
-    }
-
-    // Generate signed URL (valid for 1 hour)
-    const signedUrl = await generateSignedUrl(key, 3600);
-    
-    res.json({ signedUrl });
-  } catch (error) {
-    console.error('Error generating signed URL:', error);
-    res.status(500).json({ error: 'Failed to generate signed URL' });
-  }
-});
+// GET /image/:key - Redirect to signed URL for image (so <img src="/image/:key"> works)
+// Support keys containing slashes (e.g. 'products/uuid.jpg') by using a wildcard
+// NOTE: The streaming `/image/*` handler was removed in favor of the regex
+// `app.get(/^\/image\/(.+)$/...)` handler above which redirects to a
+// presigned URL. Removing the duplicate wildcard route avoids path parsing
+// errors and ensures consistent behavior.
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
 });
+

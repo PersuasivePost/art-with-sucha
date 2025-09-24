@@ -1,4 +1,5 @@
 import "./Header.css";
+import { useState, useEffect } from "react";
 
 interface HeaderProps {
   searchTerm: string;
@@ -6,6 +7,24 @@ interface HeaderProps {
 }
 
 export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [artistEmail, setArtistEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('artistToken');
+    const email = localStorage.getItem('artistEmail');
+    setIsLoggedIn(!!token);
+    setArtistEmail(email);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('artistToken');
+    localStorage.removeItem('artistEmail');
+    setIsLoggedIn(false);
+    setArtistEmail(null);
+    // reload to update UI or navigate home
+    window.location.href = '/';
+  };
 
   return (
     <header>
@@ -24,6 +43,17 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           </a>
         </div>
         <span className="welcome-text">Welcome to my Art Gallery!</span>
+
+        <div className="auth-status">
+          {isLoggedIn ? (
+            <>
+              <span className="logged-in-text">You are logged in{artistEmail ? ` as ${artistEmail}` : ''}</span>
+              <button className="logout-btn" onClick={handleLogout}>Logout</button>
+            </>
+          ) : (
+            <a href="/login" className="login-link">Login</a>
+          )}
+        </div>
       </div>
 
       {/* Main Nav */}
@@ -44,10 +74,13 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           <div className="search-box">
             <input
               type="text"
+              id="header-search"
+              name="site-search"
               placeholder="Search artworks..."
               className="search-input"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
+              aria-label="Search artworks"
             />
             <div className="search-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
