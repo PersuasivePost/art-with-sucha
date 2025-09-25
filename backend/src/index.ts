@@ -100,8 +100,23 @@ async function generateSignedUrl(key: string, expiresIn: number = 3600) {
 }
 
 // Middleware
+// Allow configuring allowed origins via ALLOWED_ORIGINS env var (comma-separated).
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || '';
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173'
+];
+const envOrigins = allowedOriginsEnv.split(',').map(s => s.trim()).filter(Boolean);
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envOrigins]));
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+  origin: (origin: any, callback: any) => {
+    // Allow non-browser clients (curl, server-to-server) which have no origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    return callback(new Error('CORS policy: origin not allowed'), false);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
