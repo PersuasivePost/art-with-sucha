@@ -69,12 +69,13 @@ export default function Home() {
         fetchMainSections();
     }, []);
 
+    // Use Vite env var for backend (falls back to localhost for local dev)
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+
     const fetchMainSections = async () => {
         try {
-            // Hardcode for testing - the env var should be 'http://localhost:5000'
-            const backendUrl = 'http://localhost:5000';
             console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
-            console.log('Using hardcoded backend URL:', backendUrl);
+            console.log('Using backend URL:', backendUrl);
             console.log('Fetching sections from:', `${backendUrl}/`);
             const response = await fetch(`${backendUrl}/`);
             console.log('Response status:', response.status);
@@ -161,7 +162,6 @@ export default function Home() {
                 formData.append('image', editSection.coverImage);
             }
             
-            const backendUrl = 'http://localhost:5000'; // Use hardcoded URL for consistency
             const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionToEdit.name)}`, {
                 method: 'PUT',
                 headers: {
