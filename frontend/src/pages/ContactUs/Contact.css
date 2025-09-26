@@ -1,77 +1,83 @@
 .contact-page {
-  padding: 48px 16px;
+  padding: 56px 16px;
+  color: #111827;
 }
 
 .contact-hero {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
+}
+
+.contact-hero h1 {
+  font-size: 34px;
+  margin: 0 0 8px 0;
+}
+
+.contact-hero .lead {
+  color: #374151;
+  margin: 0;
 }
 
 .contact-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
-  max-width: 1000px;
+  gap: 24px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
 .contact-card {
   background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 8px 30px rgba(2,6,23,0.06);
 }
 
-.contact-card.info {
+/* info column uses shared .contact-card styles */
+
+.contact-row {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.contact-form label {
-  display: block;
-  margin-bottom: 12px;
-  font-weight: 500;
-}
-
-.contact-form input,
-.contact-form textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #e6e6e6;
-  margin-top: 6px;
-  box-sizing: border-box;
-}
-
-.contact-actions {
-  display: flex;
+  gap: 14px;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
+  margin-bottom: 14px;
 }
 
-.btn-primary {
-  background: #111827;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+.contact-row .icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #111827;
 }
 
-.note {
-  font-size: 14px;
+.contact-row .label { font-size: 13px; color: #6b7280; }
+.contact-row .value { font-weight: 600; color: #111827; }
+.contact-row .value a { color: inherit; text-decoration: none; }
+.contact-row .sep { margin: 0 8px; color: #9ca3af }
+
+.note.instruction.large { margin-top: 18px; font-weight: 600; color: #111827; }
+
+.btn-cta {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 18px;
+  background: linear-gradient(90deg,#111827,#374151);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  text-decoration: none;
 }
 
-.note.success { color: #10b981; }
-.note.error { color: #ef4444; }
+.contact-card.gallery { padding: 14px; display:flex; align-items:center; justify-content:center }
+.gallery-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:8px; width:100%; }
+.gallery-grid img { width:100%; height:160px; object-fit:cover; border-radius:8px }
 
-@media (min-width: 800px) {
-  .contact-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 28px;
-  }
-
-  .contact-hero { margin-bottom: 36px; }
+@media (min-width: 880px) {
+  .contact-grid { grid-template-columns: 460px 1fr; gap: 32px; }
+  .gallery-grid img { height:200px }
 }
+
