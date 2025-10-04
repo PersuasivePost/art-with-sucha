@@ -372,6 +372,16 @@
   border-radius: 4px;
 }
 
+.clickable-image {
+  cursor: zoom-in;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.clickable-image:hover {
+  transform: scale(1.02);
+  filter: brightness(1.05);
+}
+
 .nav-arrow {
   position: absolute;
   top: 50%;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Header from '../../../components/Header/Header';
 import Footer from '../../../components/Footer/Footer';
+import ImageModal from '../../../components/ImageModal/ImageModal';
 import './ProductsView.css';
 
 interface Product {
@@ -30,6 +31,10 @@ export default function ProductsView() {
   const [isArtist, setIsArtist] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  
+  // Image Modal State
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imageModalUrl, setImageModalUrl] = useState('');
   
   // Add Product Form State
   const [showAddProduct, setShowAddProduct] = useState(false);
@@ -305,6 +310,16 @@ export default function ProductsView() {
     setCurrentImageIndex(index);
   };
 
+  const openImageModal = (imageUrl: string) => {
+    setImageModalUrl(imageUrl);
+    setImageModalOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setImageModalOpen(false);
+    setImageModalUrl('');
+  };
+
   const formatPrice = (price: number) => {
     // Format as Indian Rupees with rupee symbol
     return new Intl.NumberFormat('en-IN', {
@@ -509,7 +524,9 @@ export default function ProductsView() {
                     <img 
                       src={getImageUrl(selectedProduct.images[currentImageIndex])}
                       alt={selectedProduct.title}
-                      className="main-image"
+                      className="main-image clickable-image"
+                      onClick={() => openImageModal(getImageUrl(selectedProduct.images[currentImageIndex]))}
+                      title="Click to view full size"
                     />
                     
                     {/* Navigation arrows */}
@@ -844,6 +861,15 @@ export default function ProductsView() {
           </div>
         </div>
       )}
+
+      {/* Image Modal for Full-Size View */}
+      <ImageModal 
+        isOpen={imageModalOpen}
+        imageUrl={imageModalUrl}
+        altText={selectedProduct?.title}
+        onClose={closeImageModal}
+      />
+      
       <Footer />
     </div>
   );
