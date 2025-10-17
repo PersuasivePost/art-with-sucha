@@ -3,10 +3,10 @@ export function resolveImageUrl(imagePath: string | null | undefined): string | 
   // If already a full URL (http/https), return as-is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
 
-  // Normalize backend origin (prefer configured VITE_BACKEND_URL, fallback to window origin)
+  // Normalize backend origin - ALWAYS use backend, never frontend origin
   const configuredBackend = (import.meta.env.VITE_BACKEND_URL as string) || '';
   // Remove any trailing '/api/github-image' that might be accidentally configured
-  let backendOrigin = (configuredBackend || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000'));
+  let backendOrigin = configuredBackend || 'https://art-with-sucha.onrender.com';
   backendOrigin = backendOrigin.replace(/\/$/, '');
   backendOrigin = backendOrigin.replace(/\/api\/github-image\/?$/i, '');
 
