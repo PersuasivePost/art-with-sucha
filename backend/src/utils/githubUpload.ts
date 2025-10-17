@@ -144,5 +144,6 @@ export function getGitHubImageUrl(key: string): string {
   // For private repos, we'll use backend proxy endpoint
   // Backend will fetch from GitHub API with authentication
   // This keeps the token secure on the backend
-  return `/api/github-image/${encodeURIComponent(key)}`;
+  // Don't encode the key - the regex route handler expects the full path with slashes
+  return `/api/github-image/${key}`;
 }

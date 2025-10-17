@@ -8,8 +8,13 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { uploadFile, uploadMultipleFiles, getImageUrl, getMultipleImageUrls, getStorageType } from './utils/storageAdapter.js';
 // Load environment variables
 dotenv.config();
+// Log the storage mode at startup
+console.log(`\n🚀 Starting Art Portfolio Backend`);
+console.log(`📦 Storage Mode: ${getStorageType().toUpperCase()}`);
+console.log(`🎨 Ready to serve!\n`);
 const app = express();
 const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
@@ -43,7 +48,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage, fileFilter });
 const uploadSingleImage = upload.single('image');
 const uploadMultipleImages = upload.array('images', 10);
-// Upload functions
+// Upload functions - Keep for backward compatibility with B2
 async function uploadFileToB2(file, folder) {
     const fileExtension = path.extname(file.originalname);
     const fileName = `${uuidv4()}${fileExtension}`;
@@ -138,11 +143,11 @@ app.get('/sections', async (req, res) => {
         });
         const sectionsWithSignedUrls = await Promise.all(sections.map(async (section) => {
             const coverImageUrl = section.coverImage
-                ? await generateSignedUrl(section.coverImage)
+                ? await getImageUrl(section.coverImage)
                 : null;
             const childrenWithSignedUrls = await Promise.all(section.children.map(async (subsection) => {
                 const subsectionCoverImageUrl = subsection.coverImage
-                    ? await generateSignedUrl(subsection.coverImage)
+                    ? await getImageUrl(subsection.coverImage)
                     : null;
                 return { ...subsection, coverImage: subsectionCoverImageUrl };
             }));
@@ -221,6 +226,65 @@ const createSlug = (text) => {
         .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 };
 // ====== PUBLIC ROUTES (No Auth Required) ======
+// GET /api/github-image/* - Proxy endpoint for private GitHub repository images
+// This fetches images from private GitHub repo using backend token
+app.get(/^\/api\/github-image\/(.+)$/, async (req, res) => {
+    try {
+        const key = req.params[0];
+        if (!key) {
+            res.status(400).json({ error: 'Image key is required' });
+            return;
+        }
+        // Only use this proxy for GitHub storage
+        if (getStorageType() !== 'github') {
+            res.status(400).json({ error: 'GitHub storage not configured' });
+            return;
+        }
+        const owner = process.env.GITHUB_REPO_OWNER || '';
+        const repo = process.env.GITHUB_REPO_NAME || '';
+        const branch = process.env.GITHUB_REPO_BRANCH || 'main';
+        const token = process.env.GITHUB_TOKEN || '';
+        if (!token || !owner || !repo) {
+            console.error('GitHub configuration incomplete');
+            res.status(500).json({ error: 'GitHub storage not properly configured' });
+            return;
+        }
+        // Fetch from GitHub API with authentication
+        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${key}?ref=${branch}`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.raw', // Get raw content
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        });
+        if (!response.ok) {
+            console.error(`GitHub API error for ${key}:`, response.status, response.statusText);
+            res.status(response.status).json({ error: 'Failed to fetch image from GitHub' });
+            return;
+        }
+        // Get content type from response or infer from filename
+        const contentType = response.headers.get('content-type') ||
+            (key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' :
+                key.match(/\.png$/i) ? 'image/png' :
+                    key.match(/\.gif$/i) ? 'image/gif' :
+                        key.match(/\.webp$/i) ? 'image/webp' :
+                            'application/octet-stream');
+        // Set cache headers for better performance
+        res.set({
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+            'Access-Control-Allow-Origin': '*'
+        });
+        // Stream the image to the client
+        const imageBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(imageBuffer));
+    }
+    catch (error) {
+        console.error('Error fetching image from GitHub:', error);
+        res.status(500).json({ error: 'Failed to fetch image' });
+    }
+});
 // GET /image/:key - Stream image bytes for image keys (supports keys with slashes)
 // This handler is placed before dynamic routes so it won't be shadowed by 
 // the `/:sectionName` catch-alls.
@@ -235,13 +299,13 @@ app.get(/^\/image\/(.+)$/, async (req, res) => {
         return;
     }
     try {
-        console.log(`/image/:key - redirecting to presigned URL for key=${key}`);
-        const signedUrl = await generateSignedUrl(key, 600); // 10 minutes
+        console.log(`/image/:key - redirecting to image URL for key=${key}`);
+        const imageUrl = await getImageUrl(key, 600); // 10 minutes
         // Use a 302 redirect so the browser will follow to the signed URL for the image
-        res.redirect(302, signedUrl);
+        res.redirect(302, imageUrl);
     }
     catch (err) {
-        console.error('Error generating signed URL for image key:', key, err);
+        console.error('Error generating image URL for key:', key, err);
         res.status(500).json({ error: 'Failed to generate image URL' });
     }
 });
@@ -251,13 +315,13 @@ app.get(/^\/debug\/signed\/(.+)$/, async (req, res) => {
     if (!key)
         return res.status(400).json({ error: 'Key required' });
     try {
-        console.log(`Generating signed URL for debug key='${key}'`);
-        const url = await generateSignedUrl(key, 600);
-        res.json({ signedUrl: url });
+        console.log(`Generating image URL for debug key='${key}'`);
+        const url = await getImageUrl(key, 600);
+        res.json({ signedUrl: url, storageType: getStorageType() });
     }
     catch (err) {
-        console.error('Error generating signed URL for debug:', err);
-        res.status(500).json({ error: 'Failed to generate signed URL' });
+        console.error('Error generating image URL for debug:', err);
+        res.status(500).json({ error: 'Failed to generate image URL' });
     }
 });
 // GET / - Get all main sections (Level 1)
@@ -276,11 +340,11 @@ app.get("/", async (req, res) => {
         });
         const sectionsWithSignedUrls = await Promise.all(sections.map(async (section) => {
             const coverImageUrl = section.coverImage
-                ? await generateSignedUrl(section.coverImage)
+                ? await getImageUrl(section.coverImage)
                 : null;
             const childrenWithSignedUrls = await Promise.all(section.children.map(async (subsection) => {
                 const subsectionCoverImageUrl = subsection.coverImage
-                    ? await generateSignedUrl(subsection.coverImage)
+                    ? await getImageUrl(subsection.coverImage)
                     : null;
                 return { ...subsection, coverImage: subsectionCoverImageUrl };
             }));
@@ -335,13 +399,11 @@ app.get("/:sectionName", async (req, res) => {
         // Generate signed URLs for subsection cover images and product images
         const childrenWithSignedUrls = await Promise.all(mainSection.children.map(async (subsection) => {
             const subsectionCoverImageUrl = subsection.coverImage
-                ? await generateSignedUrl(subsection.coverImage)
+                ? await getImageUrl(subsection.coverImage)
                 : null;
             // Generate signed URLs for products in this subsection
             const productsWithSignedUrls = await Promise.all((subsection.products || []).map(async (product) => {
-                const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
-                    return await generateSignedUrl(imageKey);
-                }));
+                const signedImageUrls = await getMultipleImageUrls(product.images || []);
                 return { ...product, images: signedImageUrls };
             }));
             return {
@@ -352,7 +414,7 @@ app.get("/:sectionName", async (req, res) => {
         }));
         // Generate signed URL for main section cover image (if exists)
         const mainSectionCoverImageUrl = mainSection.coverImage
-            ? await generateSignedUrl(mainSection.coverImage)
+            ? await getImageUrl(mainSection.coverImage)
             : null;
         const sectionWithSignedUrls = {
             ...mainSection,
@@ -411,9 +473,7 @@ app.get("/:sectionName/:subsectionName", async (req, res) => {
         }
         // Generate signed URLs for product images
         const productsWithSignedUrls = await Promise.all((subsection.products || []).map(async (product) => {
-            const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
-                return await generateSignedUrl(imageKey);
-            }));
+            const signedImageUrls = await getMultipleImageUrls(product.images || []);
             return { ...product, images: signedImageUrls };
         }));
         res.json({
@@ -470,9 +530,7 @@ app.get("/:sectionName/:subsectionName/:productId", async (req, res) => {
             return;
         }
         // Generate signed URLs for product images
-        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
-            return await generateSignedUrl(imageKey);
-        }));
+        const signedImageUrls = await getMultipleImageUrls(product.images || []);
         const productWithSignedUrls = { ...product, images: signedImageUrls };
         res.json({
             product: productWithSignedUrls,
@@ -502,7 +560,7 @@ app.post("/create-section", authenticateArtist, uploadSingleImage, async (req, r
         // Upload image if provided
         if (imageFile) {
             try {
-                const uploadResult = await uploadFileToB2(imageFile, 'sections');
+                const uploadResult = await uploadFile(imageFile, 'sections');
                 coverImageKey = uploadResult.key;
             }
             catch (uploadError) {
@@ -547,7 +605,7 @@ app.post("/:sectionName", authenticateArtist, uploadSingleImage, async (req, res
         // Upload image if provided
         if (imageFile) {
             try {
-                const uploadResult = await uploadFileToB2(imageFile, 'sections');
+                const uploadResult = await uploadFile(imageFile, 'sections');
                 coverImageKey = uploadResult.key;
             }
             catch (uploadError) {
@@ -613,7 +671,7 @@ app.post("/:sectionName/create-subsection", authenticateArtist, uploadSingleImag
         // Upload image if provided
         if (imageFile) {
             try {
-                const uploadResult = await uploadFileToB2(imageFile, 'sections');
+                const uploadResult = await uploadFile(imageFile, 'sections');
                 coverImageKey = uploadResult.key;
             }
             catch (uploadError) {
@@ -689,7 +747,7 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, upload
         let imageKeys = [];
         if (imageFiles && imageFiles.length > 0) {
             try {
-                const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
+                const uploadResults = await uploadMultipleFiles(imageFiles, 'products');
                 imageKeys = uploadResults.map((result) => result.key);
             }
             catch (uploadError) {
@@ -751,9 +809,7 @@ app.post("/:sectionName/:subsectionName/add-product", authenticateArtist, upload
             }
         });
         // Generate signed URLs for the created product images
-        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
-            return await generateSignedUrl(imageKey);
-        }));
+        const signedImageUrls = await getMultipleImageUrls(product.images || []);
         const productWithSignedUrls = { ...product, images: signedImageUrls };
         res.status(201).json({
             message: 'Product created successfully',
@@ -780,7 +836,7 @@ app.put("/:sectionName", authenticateArtist, uploadSingleImage, async (req, res)
         // If a new image is provided, upload it
         if (imageFile) {
             try {
-                const uploadResult = await uploadFileToB2(imageFile, 'sections');
+                const uploadResult = await uploadFile(imageFile, 'sections');
                 coverImageKey = uploadResult.key;
             }
             catch (uploadError) {
@@ -844,7 +900,7 @@ app.put("/:sectionName/:subsectionName", authenticateArtist, uploadSingleImage, 
         // If a new image is provided, upload it
         if (imageFile) {
             try {
-                const uploadResult = await uploadFileToB2(imageFile, 'sections'); // Upload to sections folder
+                const uploadResult = await uploadFile(imageFile, 'sections'); // Upload to sections folder
                 coverImageKey = uploadResult.key;
             }
             catch (uploadError) {
@@ -962,7 +1018,7 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, uploadMultipleI
         let finalImages;
         if (imageFiles.length > 0) {
             try {
-                const uploadResults = await uploadMultipleFilesToB2(imageFiles, 'products');
+                const uploadResults = await uploadMultipleFiles(imageFiles, 'products');
                 const newKeys = uploadResults.map((r) => r.key);
                 finalImages = Array.isArray(existingProduct.images) ? [...existingProduct.images, ...newKeys] : newKeys;
             }
@@ -986,9 +1042,7 @@ app.put("/:sectionName/:subsectionName/:id", authenticateArtist, uploadMultipleI
             updateData.images = finalImages;
         const product = await prisma.product.update({ where: { id: existingProduct.id }, data: updateData });
         // Generate signed URLs for the updated product images
-        const signedImageUrls = await Promise.all((product.images || []).map(async (imageKey) => {
-            return await generateSignedUrl(imageKey);
-        }));
+        const signedImageUrls = await getMultipleImageUrls(product.images || []);
         const productWithSignedUrls = { ...product, images: signedImageUrls };
         res.json({
             message: 'Product updated successfully',
