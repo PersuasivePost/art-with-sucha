@@ -14,7 +14,7 @@ import {
   getImageUrl, 
   getMultipleImageUrls,
   getStorageType 
-} from './utils/storageAdapter';
+} from './utils/storageAdapter.js';
 
 // Extend Express Request type to include artist property
 declare global {
@@ -275,6 +275,75 @@ const createSlug = (text: string): string => {
 };
 
 // ====== PUBLIC ROUTES (No Auth Required) ======
+
+// GET /api/github-image/* - Proxy endpoint for private GitHub repository images
+// This fetches images from private GitHub repo using backend token
+app.get(/^\/api\/github-image\/(.+)$/, async (req, res) => {
+  try {
+    const key = (req.params as any)[0];
+    if (!key) {
+      res.status(400).json({ error: 'Image key is required' });
+      return;
+    }
+
+    // Only use this proxy for GitHub storage
+    if (getStorageType() !== 'github') {
+      res.status(400).json({ error: 'GitHub storage not configured' });
+      return;
+    }
+
+    const owner = process.env.GITHUB_REPO_OWNER || '';
+    const repo = process.env.GITHUB_REPO_NAME || '';
+    const branch = process.env.GITHUB_REPO_BRANCH || 'main';
+    const token = process.env.GITHUB_TOKEN || '';
+
+    if (!token || !owner || !repo) {
+      console.error('GitHub configuration incomplete');
+      res.status(500).json({ error: 'GitHub storage not properly configured' });
+      return;
+    }
+
+    // Fetch from GitHub API with authentication
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${key}?ref=${branch}`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.raw', // Get raw content
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
+
+    if (!response.ok) {
+      console.error(`GitHub API error for ${key}:`, response.status, response.statusText);
+      res.status(response.status).json({ error: 'Failed to fetch image from GitHub' });
+      return;
+    }
+
+    // Get content type from response or infer from filename
+    const contentType = response.headers.get('content-type') || 
+                       (key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' :
+                        key.match(/\.png$/i) ? 'image/png' :
+                        key.match(/\.gif$/i) ? 'image/gif' :
+                        key.match(/\.webp$/i) ? 'image/webp' :
+                        'application/octet-stream');
+
+    // Set cache headers for better performance
+    res.set({
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+      'Access-Control-Allow-Origin': '*'
+    });
+
+    // Stream the image to the client
+    const imageBuffer = await response.arrayBuffer();
+    res.send(Buffer.from(imageBuffer));
+    
+  } catch (error: any) {
+    console.error('Error fetching image from GitHub:', error);
+    res.status(500).json({ error: 'Failed to fetch image' });
+  }
+});
 
 // GET /image/:key - Stream image bytes for image keys (supports keys with slashes)
 // This handler is placed before dynamic routes so it won't be shadowed by 

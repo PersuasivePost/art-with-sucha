@@ -3,12 +3,12 @@
  * Automatically switches between GitHub and Backblaze based on configuration
  */
 
-import { uploadFileToB2, uploadMultipleFilesToB2, generateSignedUrl } from './upload';
+import { uploadFileToB2, uploadMultipleFilesToB2, generateSignedUrl } from './upload.js';
 import { 
   uploadFileToGitHub, 
   uploadMultipleFilesToGitHub, 
   getGitHubImageUrl 
-} from './githubUpload';
+} from './githubUpload.js';
 
 // Determine which storage to use based on environment variable
 const useGitHub = process.env.USE_GITHUB_STORAGE === 'true';

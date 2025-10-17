@@ -10,7 +10,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate-images": "ts-node src/migrate-images.ts",
-    "inspect-db": "ts-node src/inspect-db.ts"
+    "update-db-urls": "ts-node src/update-db-urls.ts",
+    "inspect-db": "ts-node src/inspect-db.ts",
+    "test-github": "ts-node src/test-github-setup.ts"
   },
   "keywords": [],
   "author": "",

@@ -133,15 +133,16 @@ export async function deleteFileFromGitHub(filePath: string): Promise<void> {
 }
 
 /**
- * Generate public URL for GitHub-hosted image
- * For private repos, you can use GitHub token in headers for authentication
+ * Generate authenticated URL for GitHub-hosted image (private repo support)
+ * Returns a backend proxy URL that will fetch from GitHub with authentication
  */
 export function getGitHubImageUrl(key: string): string {
   const owner = process.env.GITHUB_REPO_OWNER || '';
   const repo = process.env.GITHUB_REPO_NAME || '';
   const branch = process.env.GITHUB_REPO_BRANCH || 'main';
   
-  // For private repos, raw.githubusercontent.com URLs work with authentication
-  // The frontend will need to include the token in requests if the repo is private
-  return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${key}`;
+  // For private repos, we'll use backend proxy endpoint
+  // Backend will fetch from GitHub API with authentication
+  // This keeps the token secure on the backend
+  return `/api/github-image/${encodeURIComponent(key)}`;
 }
