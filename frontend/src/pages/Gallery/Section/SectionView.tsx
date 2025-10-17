@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Header from '../../../components/Header/Header'
 import Footer from '../../../components/Footer/Footer'
+import { resolveImageUrl } from '../../../utils/image'
 import './SectionView.css'
 
 interface Section {
@@ -315,13 +316,13 @@ export default function SectionView() {
                 className="subsection-image"
                 onClick={() => handleSubsectionClick(subsection.name)}
                 >
-                {subsection.coverImage ? (
-                    <img 
-                    src={subsection.coverImage}
-                    alt={subsection.name}
-                    loading="lazy"
-                    />
-                ) : (
+        {subsection.coverImage ? (
+          <img 
+          src={resolveImageUrl(subsection.coverImage) || ''}
+          alt={subsection.name}
+          loading="lazy"
+          />
+        ) : (
                     <div className="placeholder-image">No Image</div>
                 )}
                 </div>

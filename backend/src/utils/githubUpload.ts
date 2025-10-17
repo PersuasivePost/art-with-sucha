@@ -141,9 +141,14 @@ export function getGitHubImageUrl(key: string): string {
   const repo = process.env.GITHUB_REPO_NAME || '';
   const branch = process.env.GITHUB_REPO_BRANCH || 'main';
   
-  // For private repos, we'll use backend proxy endpoint
-  // Backend will fetch from GitHub API with authentication
-  // This keeps the token secure on the backend
-  // Don't encode the key - the regex route handler expects the full path with slashes
+  // If the key is already a proxy path or a full URL, return as-is
+  if (!key) return '';
+  if (key.startsWith('http://') || key.startsWith('https://')) return key;
+  if (key.startsWith('/api/github-image') || key.startsWith('/image') || key.startsWith('/')) {
+    // already a proxy path or already starts with slash
+    return key;
+  }
+
+  // For private repos, return backend proxy endpoint for the given key
   return `/api/github-image/${key}`;
 }

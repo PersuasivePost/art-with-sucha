@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Header from '../../../components/Header/Header';
 import Footer from '../../../components/Footer/Footer';
+import { resolveImageUrl } from '../../../utils/image';
 import ImageModal from '../../../components/ImageModal/ImageModal';
 import './ProductsView.css';
 
@@ -340,10 +341,12 @@ export default function ProductsView() {
       if (img.url) return (img as any).url;
       return '';
     }
-    // If it's a string and already a full URL
+    // If it's a string
     if (typeof img === 'string') {
+      // If already full URL
       if (img.startsWith('http')) return img;
-      return `${import.meta.env.VITE_BACKEND_URL}/image/${img}`;
+      // Otherwise resolve via helper (handles /api proxy and /image redirect)
+      return resolveImageUrl(img) || '';
     }
     return '';
   };

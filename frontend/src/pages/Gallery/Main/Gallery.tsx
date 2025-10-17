@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './Gallery.css'
+import { resolveImageUrl } from '../../../utils/image'
 
 interface Section {
     id: number;
@@ -59,8 +60,9 @@ export default function Gallery() {
 
     const fetchMainSections = async () => {
         try {
-            const FrontendUrl = import.meta.env.VITE_FRONTEND_URL as string;
-            const response = await fetch(FrontendUrl);
+            const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendClean = backend.replace(/\/$/, '');
+            const response = await fetch(`${backendClean}/`);
             const data = await response.json();
             setSections(data.sections || []);
 
@@ -154,7 +156,7 @@ export default function Gallery() {
                                 <div key={subsections.id} className='subsection-card' onClick={() => handleSubsectionClick(section.name, subsections.name)}>
                                     <div className='subsection-image'>
                                         {subsections.coverImage ? (
-                                            <img src={`FRONTEND_URL`+subsections.coverImage} alt={subsections.name + ' cover image'} loading='lazy' />
+                                            <img src={resolveImageUrl(subsections.coverImage) || ''} alt={subsections.name + ' cover image'} loading='lazy' />
                                         ) : (
                                             <div className='placeholder-image'>No Image</div>
                                         )}
