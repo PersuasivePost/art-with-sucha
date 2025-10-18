@@ -105,10 +105,11 @@ export default function ProductsView() {
 
   const fetchProducts = async () => {
     try {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-      const response = await fetch(
-        `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}`
-      );
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+      const backendClean = backendUrl.replace(/\/+$/g, '');
+      const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}`;
+      console.log('Fetching products from:', fetchUrl);
+      const response = await fetch(fetchUrl);
       const data = await response.json();
       setSubsection(data.subsection);
       setLoading(false);
@@ -135,9 +136,10 @@ export default function ProductsView() {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
         const token = localStorage.getItem('artistToken');
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-        const response = await fetch(
-          `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${productId}`,
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+        const backendClean = backendUrl.replace(/\/+$/g, '');
+          const response = await fetch(
+            `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${productId}`,
           {
             method: 'DELETE',
             headers: {
@@ -175,7 +177,8 @@ export default function ProductsView() {
     
     try {
       const token = localStorage.getItem('artistToken');
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+      const backendClean = backendUrl.replace(/\/+$/g, '');
       
       const formData = new FormData();
       formData.append('title', newProduct.title);
@@ -192,9 +195,9 @@ export default function ProductsView() {
         formData.append('images', image);
       });
       
-      console.log('Sending request to:', `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`);
+  console.log('Sending request to:', `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`);
       
-      const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`, {
+  const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/add-product`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -239,8 +242,9 @@ export default function ProductsView() {
     });
     
     try {
-      const token = localStorage.getItem('artistToken');
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+    const token = localStorage.getItem('artistToken');
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+    const backendClean = backendUrl.replace(/\/+$/g, '');
       
       const formData = new FormData();
       formData.append('title', editProduct.title);
@@ -255,9 +259,9 @@ export default function ProductsView() {
         formData.append('images', image);
       });
       
-      console.log('Sending PUT request to:', `${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`);
+  console.log('Sending PUT request to:', `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`);
       
-      const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`, {
+  const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName!)}/${editingProduct}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

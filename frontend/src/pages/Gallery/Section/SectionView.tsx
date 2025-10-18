@@ -64,19 +64,22 @@ export default function SectionView() {
         }
     }, [sectionName]);
 
-    const fetchSection = async () => {
-        try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}`);
-            const data = await response.json();
-            setSection(data.section);
-            setLoading(false);
-        } 
-        catch (error) {
-            console.error("Error fetching section:", error);
-            setLoading(false);
-        }
+  const fetchSection = async () => {
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+      const backendClean = backendUrl.replace(/\/+$/g, '');
+      const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}`;
+      console.log('Fetching section from:', fetchUrl);
+      const response = await fetch(fetchUrl);
+      const data = await response.json();
+      setSection(data.section);
+      setLoading(false);
+    } 
+    catch (error) {
+      console.error("Error fetching section:", error);
+      setLoading(false);
     }
+  }
 
     const handleSubsectionClick = (subsectionName: string) => {
         navigate(`/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`);
@@ -99,7 +102,9 @@ export default function SectionView() {
 
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`, {
+            const backendClean = backendUrl.replace(/\/+$/g, '');
+            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`;
+            const response = await fetch(fetchUrl, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -138,7 +143,9 @@ export default function SectionView() {
             }
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/create-subsection`, {
+            const backendClean = backendUrl.replace(/\/+$/g, '');
+            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/create-subsection`;
+            const response = await fetch(fetchUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -178,7 +185,9 @@ export default function SectionView() {
             }
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`, {
+            const backendClean = backendUrl.replace(/\/+$/g, '');
+            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`;
+            const response = await fetch(fetchUrl, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`

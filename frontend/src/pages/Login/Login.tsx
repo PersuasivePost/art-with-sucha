@@ -25,7 +25,8 @@ export default function Login() {
 
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const response = await fetch(`${backendUrl}/login`, {
+            const backendClean = backendUrl.replace(/\/+$/g, '');
+            const response = await fetch(`${backendClean}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -69,15 +69,18 @@ export default function Home() {
         fetchMainSections();
     }, []);
 
-    // Use Vite env var for backend (falls back to localhost for local dev)
+    // Use Vite env var for backend (falls back to production backend)
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+    // Clean backend (remove trailing slashes) to avoid accidental double-slash or root requests
+    const backendClean = backendUrl.replace(/\/+$/g, '');
 
     const fetchMainSections = async () => {
         try {
             console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
             console.log('Using backend URL:', backendUrl);
-            console.log('Fetching sections from:', `${backendUrl}/sections`);
-            const response = await fetch(`${backendUrl}/sections`);
+            const fetchUrl = `${backendClean}/sections`;
+            console.log('Fetching sections from:', fetchUrl);
+            const response = await fetch(fetchUrl);
             console.log('Response status:', response.status);
             console.log('Response ok:', response.ok);
             
@@ -119,7 +122,7 @@ export default function Home() {
                 formData.append('image', newSection.coverImage);
             }
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/create-section`, {
+            const response = await fetch(`${backendClean}/create-section`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -204,7 +207,7 @@ export default function Home() {
                 formData.append('image', newSubsection.coverImage);
             }
 
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(addingSubsectionTo)}/create-subsection`, {
+            const response = await fetch(`${backendClean}/${encodeURIComponent(addingSubsectionTo)}/create-subsection`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -235,7 +238,7 @@ export default function Home() {
         }
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(sectionName)}`, {
+            const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName)}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
