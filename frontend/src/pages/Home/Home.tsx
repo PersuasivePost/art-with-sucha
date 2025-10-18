@@ -78,7 +78,7 @@ export default function Home() {
         try {
             console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
             console.log('Using backend URL:', backendUrl);
-            const fetchUrl = `${backendClean}/sections`;
+            const fetchUrl = new URL('sections', backendClean + '/').toString();
             console.log('Fetching sections from:', fetchUrl);
             const response = await fetch(fetchUrl);
             console.log('Response status:', response.status);
@@ -122,7 +122,7 @@ export default function Home() {
                 formData.append('image', newSection.coverImage);
             }
 
-            const response = await fetch(`${backendClean}/create-section`, {
+            const response = await fetch(new URL('create-section', backendClean + '/').toString(), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -165,7 +165,7 @@ export default function Home() {
                 formData.append('image', editSection.coverImage);
             }
             
-            const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionToEdit.name)}`, {
+            const response = await fetch(new URL(encodeURIComponent(sectionToEdit.name), backendClean + '/').toString(), {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -207,7 +207,7 @@ export default function Home() {
                 formData.append('image', newSubsection.coverImage);
             }
 
-            const response = await fetch(`${backendClean}/${encodeURIComponent(addingSubsectionTo)}/create-subsection`, {
+            const response = await fetch(new URL(`${encodeURIComponent(addingSubsectionTo)}/create-subsection`, backendClean + '/').toString(), {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`
@@ -238,7 +238,7 @@ export default function Home() {
         }
 
         try {
-            const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName)}`, {
+            const response = await fetch(new URL(encodeURIComponent(sectionName), backendClean + '/').toString(), {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('artistToken')}`

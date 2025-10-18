@@ -68,9 +68,9 @@ export default function SectionView() {
     try {
       const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
       const backendClean = backendUrl.replace(/\/+$/g, '');
-      const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}`;
-      console.log('Fetching section from:', fetchUrl);
-      const response = await fetch(fetchUrl);
+            const fetchUrl = new URL(encodeURIComponent(sectionName!), backendClean + '/').toString();
+            console.log('Fetching section from:', fetchUrl);
+            const response = await fetch(fetchUrl);
       const data = await response.json();
       setSection(data.section);
       setLoading(false);
@@ -103,7 +103,7 @@ export default function SectionView() {
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const backendClean = backendUrl.replace(/\/+$/g, '');
-            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`;
+            const fetchUrl = new URL(`${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`, backendClean + '/').toString();
             const response = await fetch(fetchUrl, {
                 method: 'DELETE',
                 headers: {
@@ -144,7 +144,7 @@ export default function SectionView() {
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const backendClean = backendUrl.replace(/\/+$/g, '');
-            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/create-subsection`;
+            const fetchUrl = new URL(`${encodeURIComponent(sectionName!)}/create-subsection`, backendClean + '/').toString();
             const response = await fetch(fetchUrl, {
                 method: 'POST',
                 headers: {
@@ -186,7 +186,7 @@ export default function SectionView() {
 
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const backendClean = backendUrl.replace(/\/+$/g, '');
-            const fetchUrl = `${backendClean}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`;
+            const fetchUrl = new URL(`${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`, backendClean + '/').toString();
             const response = await fetch(fetchUrl, {
                 method: 'PUT',
                 headers: {

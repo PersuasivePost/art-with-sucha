@@ -61,8 +61,8 @@ export default function Gallery() {
     const fetchMainSections = async () => {
         try {
             const backend = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const backendClean = backend.replace(/\/$/, '');
-            const response = await fetch(`${backendClean}/sections`);
+            const backendClean = backend.replace(/\/+$/g, '');
+            const response = await fetch(new URL('sections', backendClean + '/').toString());
             const data = await response.json();
             setSections(data.sections || []);
 
@@ -82,8 +82,8 @@ export default function Gallery() {
     const fetchSectionWithSubsections = async (sectionName: string) => {
         try {
             const backend = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
-            const backendClean = backend.replace(/\/$/, '');
-            const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName)}`);
+            const backendClean = backend.replace(/\/+$/g, '');
+            const response = await fetch(new URL(encodeURIComponent(sectionName), backendClean + '/').toString());
             const data = await response.json();
             setSectionsWithSubsections(prev => ({
                 ...prev,
