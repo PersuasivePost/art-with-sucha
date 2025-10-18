@@ -8,6 +8,8 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import fs from 'fs';
+const fsPromises = fs.promises;
 import { 
   uploadFile, 
   uploadMultipleFiles, 
@@ -277,157 +279,130 @@ const createSlug = (text: string): string => {
 // ====== PUBLIC ROUTES (No Auth Required) ======
 
 // GET /api/github-image/* - Proxy endpoint for private GitHub repository images
-// This fetches images from private GitHub repo using backend token
+// This fetches images from private GitHub repo using backend token and caches them locally
 app.get(/^\/api\/github-image\/(.+)$/, async (req, res) => {
   try {
     const key = (req.params as any)[0];
-    if (!key) {
-      res.status(400).json({ error: 'Image key is required' });
-      return;
-    }
+    if (!key) return res.status(400).json({ error: 'Image key is required' });
 
-    // Only use this proxy for GitHub storage
-    if (getStorageType() !== 'github') {
-      res.status(400).json({ error: 'GitHub storage not configured' });
-      return;
-    }
+    if (getStorageType() !== 'github') return res.status(400).json({ error: 'GitHub storage not configured' });
 
     const owner = process.env.GITHUB_REPO_OWNER || '';
     const repo = process.env.GITHUB_REPO_NAME || '';
     const branch = process.env.GITHUB_REPO_BRANCH || 'main';
     const token = process.env.GITHUB_TOKEN || '';
 
-    if (!token || !owner || !repo) {
-      console.error('GitHub configuration incomplete');
-      res.status(500).json({ error: 'GitHub storage not properly configured' });
-      return;
+    if (!owner || !repo) return res.status(500).json({ error: 'GitHub storage not properly configured' });
+
+    // Cache setup
+    const cacheDir = path.join(process.cwd(), '.cache', 'github-images');
+    const safeCacheKey = key.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const cachePath = path.join(cacheDir, safeCacheKey);
+    const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+    try { await fsPromises.mkdir(cacheDir, { recursive: true }); } catch (e) { /* non-fatal */ }
+
+    // Serve fresh cache if available
+    try {
+      const stat = await fsPromises.stat(cachePath).catch(() => null);
+      if (stat && (Date.now() - stat.mtimeMs) < CACHE_TTL_MS) {
+        console.log(`Serving image from cache: ${cachePath}`);
+        const cached = await fsPromises.readFile(cachePath);
+        const contentType = key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' : key.match(/\.png$/i) ? 'image/png' : 'application/octet-stream';
+        res.set({ 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000', 'Access-Control-Allow-Origin': '*' });
+        return res.send(cached);
+      }
+    } catch (e) {
+      console.warn('Cache check failed:', e);
     }
 
-    // Fetch from GitHub API with authentication
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${key}?ref=${branch}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/vnd.github.raw', // Get raw content
-        'X-GitHub-Api-Version': '2022-11-28'
+    // Try raw.githubusercontent first (no auth, faster)
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${key}`;
+    let response: any = null;
+    try {
+      response = await fetch(rawUrl);
+      if (response && response.ok) {
+        console.log('Fetched from raw.githubusercontent:', rawUrl);
+      } else {
+        response = null;
       }
-    });
+    } catch (e) {
+      console.warn('raw.githubusercontent fetch failed, will try GitHub API:', e && (e as any).message ? (e as any).message : String(e));
+      response = null;
+    }
+
+    // Fallback to GitHub API with retries if raw failed
+    if (!response) {
+      if (!token) console.warn('No GITHUB_TOKEN set; attempting unauthenticated GitHub API request (may fail)');
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${key}?ref=${branch}`;
+      const headers: any = { 'Accept': 'application/vnd.github.raw', 'X-GitHub-Api-Version': '2022-11-28' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const tryFetchWithTimeout = async (url: string, opts: any, timeoutMs = 30000) => {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const r = await fetch(url, { ...opts, signal: controller.signal });
+          clearTimeout(id);
+          return r;
+        } catch (err) {
+          clearTimeout(id);
+          throw err;
+        }
+      };
+
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Attempt ${attempt} fetching from GitHub API: ${apiUrl}`);
+          response = await tryFetchWithTimeout(apiUrl, { headers }, 30000);
+          if (response && response.ok) break;
+        } catch (err) {
+          lastErr = err;
+          console.warn(`GitHub API fetch attempt ${attempt} failed:`, err && (err as any).message ? (err as any).message : String(err));
+          const backoffMs = 500 * Math.pow(2, attempt - 1);
+          await new Promise(r => setTimeout(r, backoffMs));
+        }
+      }
+
+      if (!response) {
+        console.error('All attempts to fetch image from GitHub failed', lastErr);
+        // Try to serve stale cache if available
+        try {
+          const stat = await fsPromises.stat(cachePath).catch(() => null);
+          if (stat) {
+            console.warn('Serving stale cached image due to fetch failure');
+            const cached = await fsPromises.readFile(cachePath);
+            const contentType = key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' : key.match(/\.png$/i) ? 'image/png' : 'application/octet-stream';
+            res.set({ 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000', 'Access-Control-Allow-Origin': '*' });
+            return res.send(cached);
+          }
+        } catch (err) {
+          console.warn('Failed to read stale cache:', err);
+        }
+
+        return res.status(502).json({ error: 'Failed to fetch image from GitHub' });
+      }
+    }
 
     if (!response.ok) {
       console.error(`GitHub API error for ${key}:`, response.status, response.statusText);
-      res.status(response.status).json({ error: 'Failed to fetch image from GitHub' });
-      return;
+      return res.status(response.status).json({ error: 'Failed to fetch image from GitHub' });
     }
 
-    // Get content type from response or infer from filename
-    const contentType = response.headers.get('content-type') || 
-                       (key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' :
-                        key.match(/\.png$/i) ? 'image/png' :
-                        key.match(/\.gif$/i) ? 'image/gif' :
-                        key.match(/\.webp$/i) ? 'image/webp' :
-                        'application/octet-stream');
+    const contentType = response.headers.get('content-type') || (key.match(/\.(jpg|jpeg)$/i) ? 'image/jpeg' : key.match(/\.png$/i) ? 'image/png' : 'application/octet-stream');
+    res.set({ 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000', 'Access-Control-Allow-Origin': '*' });
 
-    // Set cache headers for better performance
-    res.set({
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-      'Access-Control-Allow-Origin': '*'
-    });
-
-    // Stream the image to the client
-    const imageBuffer = await response.arrayBuffer();
-    res.send(Buffer.from(imageBuffer));
-    
+    try {
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      fsPromises.writeFile(cachePath, imageBuffer).catch((werr) => console.warn('Failed to write cache:', werr));
+      return res.send(imageBuffer);
+    } catch (err) {
+      console.error('Error streaming image to client:', err);
+      return res.status(500).json({ error: 'Failed to stream image' });
+    }
   } catch (error: any) {
-    console.error('Error fetching image from GitHub:', error);
-    res.status(500).json({ error: 'Failed to fetch image' });
-  }
-});
-
-// GET /image/:key - Stream image bytes for image keys (supports keys with slashes)
-// This handler is placed before dynamic routes so it won't be shadowed by 
-// the `/:sectionName` catch-alls.
-app.get(/^\/image\/(.+)$/, async (req, res) => {
-  // Instead of performing a server-side GetObject (which can fail in some B2 setups),
-  // generate a short-lived presigned URL and redirect the client to it. Browsers
-  // will then fetch the image directly from Backblaze (presigned GET) which
-  // avoids CORB and streaming edge-cases.
-  const key = (req.params as any)[0] || '';
-  if (!key) {
-    res.status(400).json({ error: 'Image key is required' });
-    return;
-  }
-
-  try {
-    console.log(`/image/:key - redirecting to image URL for key=${key}`);
-    const imageUrl = await getImageUrl(key, 600); // 10 minutes
-    // Use a 302 redirect so the browser will follow to the signed URL for the image
-    res.redirect(302, imageUrl);
-  } catch (err: any) {
-    console.error('Error generating image URL for key:', key, err);
-    res.status(500).json({ error: 'Failed to generate image URL' });
-  }
-});
-
-// DEBUG: Return a signed URL for a given key (for quick testing)
-app.get(/^\/debug\/signed\/(.+)$/, async (req, res) => {
-  const key = (req.params as any)[0] || '';
-  if (!key) return res.status(400).json({ error: 'Key required' });
-  try {
-    console.log(`Generating image URL for debug key='${key}'`);
-    const url = await getImageUrl(key, 600);
-    res.json({ signedUrl: url, storageType: getStorageType() });
-  } catch (err) {
-    console.error('Error generating image URL for debug:', err);
-    res.status(500).json({ error: 'Failed to generate image URL' });
-  }
-});
-
-// GET / - Get all main sections (Level 1)
-app.get("/", async (req, res) => {
-  try {
-    console.log('GET / route hit - fetching main sections'); // Debug log
-    
-    const sections = await prisma.section.findMany({
-      where: { parentId: null }, // Top-level sections only
-      include: {
-        children: {
-          include: {
-            products: true,
-          },
-        },
-      },
-    });
-
-    const sectionsWithSignedUrls = await Promise.all(
-      sections.map(async (section) => {
-        const coverImageUrl = section.coverImage
-          ? await getImageUrl(section.coverImage)
-          : null;
-
-        const childrenWithSignedUrls = await Promise.all(
-          section.children.map(async (subsection) => {
-            const subsectionCoverImageUrl = subsection.coverImage
-              ? await getImageUrl(subsection.coverImage)
-              : null;
-            return { ...subsection, coverImage: subsectionCoverImageUrl };
-          })
-        );
-
-        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
-      })
-    );
-    
-    console.log('Found main sections with signed URLs:', sectionsWithSignedUrls.length); // Debug log
-    
-    res.json({
-      message: "Art Portfolio Backend 🎨",
-      sections: sectionsWithSignedUrls
-    });
-  } catch (error) {
-    console.error('Error fetching main sections:', error);
-    res.status(500).json({ error: 'Failed to fetch sections' });
+    console.error('Error in github-image handler:', error);
+    return res.status(500).json({ error: 'Failed to fetch image' });
   }
 });
 
@@ -517,11 +492,11 @@ app.get("/:sectionName", async (req, res) => {
 app.get("/:sectionName/:subsectionName", async (req, res) => {
   try {
     const { sectionName, subsectionName } = req.params;
-    
+
     // Convert URL parameters back to names
     const actualSectionName = sectionName.replace(/-/g, ' ');
     const actualSubsectionName = subsectionName.replace(/-/g, ' ');
-    
+
     // Find the subsection and verify it belongs to the correct main section
     const subsection = await prisma.section.findFirst({
       where: {
@@ -543,10 +518,10 @@ app.get("/:sectionName/:subsectionName", async (req, res) => {
             title: true,
             description: true,
             price: true,
-            images: true, // This field exists in the database
+            images: true,
             tags: true,
             createdAt: true
-          } as any // Temporary type assertion
+          } as any
         },
         parent: true
       }
@@ -574,75 +549,9 @@ app.get("/:sectionName/:subsectionName", async (req, res) => {
     console.error('Error fetching subsection products:', error);
     res.status(500).json({ error: 'Failed to fetch subsection products' });
   }
-});
 
-// GET /:sectionName/:subsectionName/:productId - Get single product details
-app.get("/:sectionName/:subsectionName/:productId", async (req, res) => {
-  try {
-    const { sectionName, subsectionName, productId } = req.params;
-    
-    // Convert URL parameters back to names
-    const actualSectionName = sectionName.replace(/-/g, ' ');
-    const actualSubsectionName = subsectionName.replace(/-/g, ' ');
-    
-    // Validate productId
-    const productIdNum = parseInt(productId);
-    if (isNaN(productIdNum)) {
-      res.status(400).json({ error: 'Invalid product ID' });
-      return;
-    }
-    
-    // Find the product and verify it belongs to the correct section hierarchy
-    const product = await prisma.product.findFirst({
-      where: {
-        id: productIdNum,
-        section: {
-          OR: [
-            { name: subsectionName },
-            { name: actualSubsectionName }
-          ],
-          parent: {
-            OR: [
-              { name: sectionName },
-              { name: actualSectionName }
-            ]
-          }
-        }
-      },
-      include: {
-        section: {
-          include: {
-            parent: true
-          }
-        }
-      }
-    });
+  });
 
-    if (!product) {
-      res.status(404).json({ error: 'Product not found' });
-      return;
-    }
-
-    // Generate signed URLs for product images
-    const signedImageUrls = await getMultipleImageUrls((product as any).images || []);
-
-    const productWithSignedUrls = { ...product, images: signedImageUrls };
-
-    res.json({ 
-      product: productWithSignedUrls,
-      breadcrumb: {
-        mainSection: product.section.parent?.name,
-        subsection: product.section.name,
-        productTitle: product.title
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    res.status(500).json({ error: 'Failed to fetch product' });
-  }
-});
-
-// ====== PROTECTED ROUTES (Artist Only) ======
 
 // POST /create-section - Create main section (Level 1)
 app.post("/create-section", authenticateArtist, uploadSingleImage, async (req, res) => {
