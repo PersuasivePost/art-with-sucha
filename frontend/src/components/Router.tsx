@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Home from '../pages/Home/Home'
 import Login from '../pages/Login/Login'
 import About from '../pages/AboutUs/About'
@@ -15,7 +15,8 @@ const AppRouter = () => {
             <Route path='/contact-us' element={<Contact />} />
             <Route path='/:sectionName' element={<SectionView /> } />
             <Route path='/:sectionName/:subsectionName' element={<ProductView /> } />
-            {/* <Route path='/about' element={<About />} />  */}
+            {/* Catch-all route for unknown paths - redirect to home */}
+            <Route path='*' element={<Navigate to="/" replace />} />
         </Routes>
     )
 }

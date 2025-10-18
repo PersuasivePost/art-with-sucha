@@ -81,7 +81,9 @@ export default function Gallery() {
 
     const fetchSectionWithSubsections = async (sectionName: string) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/${encodeURIComponent(sectionName)}`);
+            const backend = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
+            const backendClean = backend.replace(/\/$/, '');
+            const response = await fetch(`${backendClean}/${encodeURIComponent(sectionName)}`);
             const data = await response.json();
             setSectionsWithSubsections(prev => ({
                 ...prev,

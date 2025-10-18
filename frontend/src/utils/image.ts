@@ -1,5 +1,6 @@
 export function resolveImageUrl(imagePath: string | null | undefined): string | null {
   if (!imagePath) return null;
+  
   // If already a full URL (http/https), return as-is
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     // Handle GitHub "blob" UI links like:
@@ -46,24 +47,25 @@ export function resolveImageUrl(imagePath: string | null | undefined): string | 
   // Strip leading slashes from imagePath
   let stripped = imagePath.replace(/^\/+/, '');
 
-  // If imagePath already begins with the proxy prefix, remove it and re-add exactly once below
+  // If imagePath already begins with the proxy prefix, remove it and re-add exactly once
   if (stripped.startsWith('api/github-image/')) {
     stripped = stripped.substring('api/github-image/'.length);
     return `${backendOrigin}/api/github-image/${stripped}`;
   }
 
-  // If imagePath begins with 'image/' or 'products/' or 'sections/' treat appropriately
-  if (stripped.startsWith('image/') || stripped.startsWith('products/') || stripped.startsWith('sections/')) {
-    // If it's an explicit /image redirect path (starting with image/), use /image/:key
-    if (stripped.startsWith('image/')) {
-      const key = stripped.substring('image/'.length);
-      return `${backendOrigin}/image/${encodeURIComponent(key)}`;
-    }
-
-    // For storage keys (products/... or sections/...), use the backend proxy
+  // If imagePath begins with 'products/' or 'sections/', use the backend proxy directly
+  // These are storage keys that should always use /api/github-image/
+  if (stripped.startsWith('products/') || stripped.startsWith('sections/')) {
     return `${backendOrigin}/api/github-image/${stripped}`;
   }
 
-  // Fallback: treat as a raw key and use /image/:key
-  return `${backendOrigin}/image/${encodeURIComponent(stripped)}`;
+  // If it starts with 'image/', it's a legacy redirect path - extract the key and use /api/github-image/
+  if (stripped.startsWith('image/')) {
+    const key = stripped.substring('image/'.length);
+    // The key after image/ should be like products/xxx.jpg or sections/xxx.jpg
+    return `${backendOrigin}/api/github-image/${key}`;
+  }
+
+  // Fallback: treat as a storage key and use /api/github-image/
+  return `${backendOrigin}/api/github-image/${stripped}`;
 }
