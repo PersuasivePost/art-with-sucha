@@ -76,8 +76,8 @@ export default function Home() {
         try {
             console.log('VITE_BACKEND_URL:', import.meta.env.VITE_BACKEND_URL);
             console.log('Using backend URL:', backendUrl);
-            console.log('Fetching sections from:', `${backendUrl}/`);
-            const response = await fetch(`${backendUrl}/`);
+            console.log('Fetching sections from:', `${backendUrl}/sections`);
+            const response = await fetch(`${backendUrl}/sections`);
             console.log('Response status:', response.status);
             console.log('Response ok:', response.ok);
             

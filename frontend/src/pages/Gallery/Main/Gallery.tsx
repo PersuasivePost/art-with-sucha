@@ -62,7 +62,7 @@ export default function Gallery() {
         try {
             const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
             const backendClean = backend.replace(/\/$/, '');
-            const response = await fetch(`${backendClean}/`);
+            const response = await fetch(`${backendClean}/sections`);
             const data = await response.json();
             setSections(data.sections || []);
 
