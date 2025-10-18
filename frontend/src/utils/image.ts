@@ -20,7 +20,7 @@ export function resolveImageUrl(imagePath: string | null | undefined): string | 
           if (parts.length >= 2) {
             parts.shift(); // drop branch name
             const repoPath = parts.join('/');
-            const configuredBackend = (import.meta.env.VITE_BACKEND_URL as string) || '';
+            const configuredBackend = (import.meta.env.VITE_BACKEND_URL as string) || 'https://art-with-sucha.onrender.com';
             let backendOrigin = configuredBackend || 'https://art-with-sucha.onrender.com';
             backendOrigin = backendOrigin.replace(/\/$/, '');
             backendOrigin = backendOrigin.replace(/\/api\/github-image\/?$/i, '');
@@ -37,7 +37,7 @@ export function resolveImageUrl(imagePath: string | null | undefined): string | 
   }
 
   // Normalize backend origin - ALWAYS use backend, never frontend origin
-  const configuredBackend = (import.meta.env.VITE_BACKEND_URL as string) || '';
+  const configuredBackend = (import.meta.env.VITE_BACKEND_URL as string) || 'https://art-with-sucha.onrender.com';
   // Remove any trailing '/api/github-image' that might be accidentally configured
   let backendOrigin = configuredBackend || 'https://art-with-sucha.onrender.com';
   backendOrigin = backendOrigin.replace(/\/$/, '');

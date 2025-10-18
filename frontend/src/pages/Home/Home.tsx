@@ -70,7 +70,7 @@ export default function Home() {
     }, []);
 
     // Use Vite env var for backend (falls back to localhost for local dev)
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
 
     const fetchMainSections = async () => {
         try {

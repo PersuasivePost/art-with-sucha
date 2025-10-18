@@ -60,7 +60,7 @@ export default function Gallery() {
 
     const fetchMainSections = async () => {
         try {
-            const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backend = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const backendClean = backend.replace(/\/$/, '');
             const response = await fetch(`${backendClean}/sections`);
             const data = await response.json();

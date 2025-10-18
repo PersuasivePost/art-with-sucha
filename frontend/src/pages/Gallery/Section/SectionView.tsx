@@ -66,7 +66,7 @@ export default function SectionView() {
 
     const fetchSection = async () => {
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}`);
             const data = await response.json();
             setSection(data.section);
@@ -98,7 +98,7 @@ export default function SectionView() {
         }
 
         try {
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(subsectionName)}`, {
                 method: 'DELETE',
                 headers: {
@@ -137,7 +137,7 @@ export default function SectionView() {
                 formData.append('image', newSubsection.coverImage);
             }
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/create-subsection`, {
                 method: 'POST',
                 headers: {
@@ -177,7 +177,7 @@ export default function SectionView() {
                 formData.append('image', newSubsection.coverImage);
             }
 
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const response = await fetch(`${backendUrl}/${encodeURIComponent(sectionName!)}/${encodeURIComponent(editingSubsection.name)}`, {
                 method: 'PUT',
                 headers: {
