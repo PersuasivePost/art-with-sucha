@@ -120,16 +120,22 @@ export function getGitHubImageUrl(key) {
     const owner = process.env.GITHUB_REPO_OWNER || '';
     const repo = process.env.GITHUB_REPO_NAME || '';
     const branch = process.env.GITHUB_REPO_BRANCH || 'main';
-    // If the key is already a proxy path or a full URL, return as-is
+    // Get backend origin for absolute URLs
+    const backendOrigin = process.env.BACKEND_URL || 'https://art-with-sucha.onrender.com';
+    // If the key is already a full URL, return as-is
     if (!key)
         return '';
     if (key.startsWith('http://') || key.startsWith('https://'))
         return key;
-    if (key.startsWith('/api/github-image') || key.startsWith('/image') || key.startsWith('/')) {
-        // already a proxy path or already starts with slash
-        return key;
+    // If the key starts with a slash, it's a relative path - make it absolute
+    if (key.startsWith('/api/github-image/') || key.startsWith('/image/')) {
+        const path = key.startsWith('/image/') ? key.replace('/image/', '/api/github-image/') : key;
+        return `${backendOrigin}${path}`;
     }
-    // For private repos, return backend proxy endpoint for the given key
-    return `/api/github-image/${key}`;
+    if (key.startsWith('/')) {
+        return `${backendOrigin}/api/github-image${key}`;
+    }
+    // For private repos, return absolute backend proxy endpoint for the given key
+    return `${backendOrigin}/api/github-image/${key}`;
 }
 //# sourceMappingURL=githubUpload.js.map
