@@ -155,44 +155,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// Helper to fetch sections (used by /sections and fallback /)
+async function fetchSectionsPayload() {
+  const sections = await prisma.section.findMany({
+    where: { parentId: null }, // Only fetch main sections
+    include: { children: { include: { products: true } } },
+  });
+
+  const sectionsWithSignedUrls = await Promise.all(
+    sections.map(async (section) => {
+      const coverImageUrl = section.coverImage ? await getImageUrl(section.coverImage) : null;
+
+      const childrenWithSignedUrls = await Promise.all(
+        section.children.map(async (subsection) => {
+          const subsectionCoverImageUrl = subsection.coverImage ? await getImageUrl(subsection.coverImage) : null;
+          return { ...subsection, coverImage: subsectionCoverImageUrl };
+        })
+      );
+
+      return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
+    })
+  );
+
+  return { sections: sectionsWithSignedUrls };
+}
+
 // GET /sections - Get all sections with signed URLs for cover images
 app.get('/sections', async (req, res) => {
   try {
-    const sections = await prisma.section.findMany({
-      where: {
-        parentId: null, // Only fetch main sections
-      },
-      include: {
-        children: {
-          include: {
-            products: true,
-          },
-        },
-      },
-    });
-
-    const sectionsWithSignedUrls = await Promise.all(
-      sections.map(async (section) => {
-        const coverImageUrl = section.coverImage
-          ? await getImageUrl(section.coverImage)
-          : null;
-
-        const childrenWithSignedUrls = await Promise.all(
-          section.children.map(async (subsection) => {
-            const subsectionCoverImageUrl = subsection.coverImage
-              ? await getImageUrl(subsection.coverImage)
-              : null;
-            return { ...subsection, coverImage: subsectionCoverImageUrl };
-          })
-        );
-
-        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
-      })
-    );
-
-    res.json({ sections: sectionsWithSignedUrls });
+    const payload = await fetchSectionsPayload();
+    res.json(payload);
   } catch (error) {
     console.error('Error fetching sections:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Fallback root - return same payload as /sections
+// This is a safe, low-risk mitigation so older frontend builds that
+// accidentally fetch the backend root will still receive the sections data.
+app.get('/', async (req, res) => {
+  try {
+    const payload = await fetchSectionsPayload();
+    res.json(payload);
+  } catch (error) {
+    console.error('Error fetching sections for root fallback:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
