@@ -3,11 +3,10 @@
     {
       "source": "/api/github-image/:path*",
       "destination": "https://art-with-sucha.onrender.com/api/github-image/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
-}
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
