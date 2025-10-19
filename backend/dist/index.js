@@ -128,37 +128,43 @@ app.use((req, res, next) => {
     });
     next();
 });
+// Helper to fetch sections (used by /sections and fallback /)
+async function fetchSectionsPayload() {
+    const sections = await prisma.section.findMany({
+        where: { parentId: null }, // Only fetch main sections
+        include: { children: { include: { products: true } } },
+    });
+    const sectionsWithSignedUrls = await Promise.all(sections.map(async (section) => {
+        const coverImageUrl = section.coverImage ? await getImageUrl(section.coverImage) : null;
+        const childrenWithSignedUrls = await Promise.all(section.children.map(async (subsection) => {
+            const subsectionCoverImageUrl = subsection.coverImage ? await getImageUrl(subsection.coverImage) : null;
+            return { ...subsection, coverImage: subsectionCoverImageUrl };
+        }));
+        return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
+    }));
+    return { sections: sectionsWithSignedUrls };
+}
 // GET /sections - Get all sections with signed URLs for cover images
 app.get('/sections', async (req, res) => {
     try {
-        const sections = await prisma.section.findMany({
-            where: {
-                parentId: null, // Only fetch main sections
-            },
-            include: {
-                children: {
-                    include: {
-                        products: true,
-                    },
-                },
-            },
-        });
-        const sectionsWithSignedUrls = await Promise.all(sections.map(async (section) => {
-            const coverImageUrl = section.coverImage
-                ? await getImageUrl(section.coverImage)
-                : null;
-            const childrenWithSignedUrls = await Promise.all(section.children.map(async (subsection) => {
-                const subsectionCoverImageUrl = subsection.coverImage
-                    ? await getImageUrl(subsection.coverImage)
-                    : null;
-                return { ...subsection, coverImage: subsectionCoverImageUrl };
-            }));
-            return { ...section, coverImage: coverImageUrl, children: childrenWithSignedUrls };
-        }));
-        res.json({ sections: sectionsWithSignedUrls });
+        const payload = await fetchSectionsPayload();
+        res.json(payload);
     }
     catch (error) {
         console.error('Error fetching sections:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// Fallback root - return same payload as /sections
+// This is a safe, low-risk mitigation so older frontend builds that
+// accidentally fetch the backend root will still receive the sections data.
+app.get('/', async (req, res) => {
+    try {
+        const payload = await fetchSectionsPayload();
+        res.json(payload);
+    }
+    catch (error) {
+        console.error('Error fetching sections for root fallback:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -1132,6 +1138,33 @@ app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, 
 // `app.get(/^\/image\/(.+)$/...)` handler above which redirects to a
 // presigned URL. Removing the duplicate wildcard route avoids path parsing
 // errors and ensures consistent behavior.
+// Backwards-compatibility route: some deployed frontend bundles still
+// request images using `/image/<path>` (sometimes with an extra leading
+// slash, producing `/image//api/github-image/...`). Add a tolerant
+// redirect so those requests are forwarded to the existing
+// `/api/github-image/<path>` proxy handler.
+app.get(/^\/image\/(.+)$/, (req, res) => {
+    try {
+        // Capture group 0 contains the remainder of the path after /image/
+        const raw = req.params[0] || '';
+        // Normalize and decode the path
+        let key = decodeURIComponent(raw);
+        // Strip any leading slashes that may have been included (e.g. "/api/..." -> "api/...")
+        key = key.replace(/^\/+/, '');
+        // If the key already starts with the proxy prefix, remove it so we don't end up with duplicated segments
+        if (key.toLowerCase().startsWith('api/github-image/')) {
+            key = key.replace(/^api\/github-image\//i, '');
+        }
+        const target = `/api/github-image/${key}`;
+        console.log(`Redirecting legacy /image request to: ${target}`);
+        // Use a temporary redirect so browsers will follow to the proxy path
+        return res.redirect(302, target);
+    }
+    catch (err) {
+        console.error('Error handling /image redirect:', err);
+        return res.status(500).send('Internal server error');
+    }
+});
 // Start server
 app.listen(PORT, () => {
     console.log(`Server started on http://localhost:${PORT}`);

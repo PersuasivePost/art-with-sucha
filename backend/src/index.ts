@@ -1272,6 +1272,35 @@ app.delete("/:sectionName/:subsectionName/:id", authenticateArtist, async (req, 
 // presigned URL. Removing the duplicate wildcard route avoids path parsing
 // errors and ensures consistent behavior.
 
+// Backwards-compatibility route: some deployed frontend bundles still
+// request images using `/image/<path>` (sometimes with an extra leading
+// slash, producing `/image//api/github-image/...`). Add a tolerant
+// redirect so those requests are forwarded to the existing
+// `/api/github-image/<path>` proxy handler.
+app.get(/^\/image\/(.+)$/, (req, res) => {
+  try {
+    // Capture group 0 contains the remainder of the path after /image/
+    const raw = (req.params as any)[0] || '';
+    // Normalize and decode the path
+    let key = decodeURIComponent(raw);
+    // Strip any leading slashes that may have been included (e.g. "/api/..." -> "api/...")
+    key = key.replace(/^\/+/, '');
+
+    // If the key already starts with the proxy prefix, remove it so we don't end up with duplicated segments
+    if (key.toLowerCase().startsWith('api/github-image/')) {
+      key = key.replace(/^api\/github-image\//i, '');
+    }
+
+    const target = `/api/github-image/${key}`;
+    console.log(`Redirecting legacy /image request to: ${target}`);
+    // Use a temporary redirect so browsers will follow to the proxy path
+    return res.redirect(302, target);
+  } catch (err) {
+    console.error('Error handling /image redirect:', err);
+    return res.status(500).send('Internal server error');
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
