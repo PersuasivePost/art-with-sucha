@@ -21,6 +21,20 @@ export default ({ mode }: { mode: string }) => {
           // increase timeout for large images
           timeout: 120000
         }
+        ,
+        // Proxy sections list and simple section-create paths to backend during dev to avoid CORS
+        '/sections': {
+          target: backend,
+          changeOrigin: true,
+          secure: false,
+          timeout: 30000
+        },
+        '/create-section': {
+          target: backend,
+          changeOrigin: true,
+          secure: false,
+          timeout: 30000
+        }
       }
     }
   })
