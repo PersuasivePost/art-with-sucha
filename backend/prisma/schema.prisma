@@ -34,3 +34,16 @@ model Product {
   images      String[]
   section     Section  @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 }
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String?
+  email        String   @unique
+  password     String
+  mobno        String?
+  address      String?
+  orderSummary Json?    @default("[]")
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

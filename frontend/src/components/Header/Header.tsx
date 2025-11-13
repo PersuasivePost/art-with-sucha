@@ -10,13 +10,20 @@ interface HeaderProps {
 export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [artistEmail, setArtistEmail] = useState<string | null>(null);
+  const [userLoggedIn, setUserLoggedIn] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('artistToken');
     const email = localStorage.getItem('artistEmail');
     setIsLoggedIn(!!token);
     setArtistEmail(email);
+    const userToken = localStorage.getItem('userToken');
+    const uName = localStorage.getItem('userName');
+    setUserLoggedIn(!!userToken);
+    setUserName(uName);
   }, []);
 
   const handleLogout = () => {
@@ -27,6 +34,15 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     // reload to update UI or navigate home
     window.location.href = '/';
   };
+
+  const handleUserLogout = () => {
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userEmail');
+    setUserLoggedIn(false);
+    setUserName(null);
+    window.location.href = '/';
+  }
 
   return (
     <header>
@@ -47,9 +63,33 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
         <span className="welcome-text">Welcome to my Art Gallery!</span>
 
         <div className="auth-status">
+          {/* User status (public shoppers) */}
+          {userLoggedIn ? (
+            <div className="user-area">
+              <span className="user-greet">heyy {userName}</span>
+              <button className="cart-btn" title="Cart">🛒</button>
+              <div className="profile-wrapper">
+                <button className="profile-toggle" onClick={() => setProfileOpen(!profileOpen)}>👤</button>
+                {profileOpen ? (
+                  <div className="profile-menu">
+                    <a href="/my-account">My profile</a>
+                    <a href="/my-orders">My orders</a>
+                    <button onClick={handleUserLogout}>Logout</button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            // Show login/signup links for users when not logged in
+            <div className="user-auth-links">
+              <a href="/login">Login</a>
+              <a href="/signup">Sign up</a>
+            </div>
+          )}
+
+          {/* Artist/admin status (separate) */}
           {isLoggedIn ? (
             <>
-              {/* Show only the artist email and logout button to keep header compact */}
               {artistEmail ? <span className="artist-email">{artistEmail}</span> : null}
               <button className="logout-button" onClick={handleLogout}>Logout</button>
             </>

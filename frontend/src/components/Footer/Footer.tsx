@@ -11,7 +11,7 @@ const Footer: React.FC = () => {
           <ul className="footer-links">
             <li><a href="/about-us">About Us</a></li>
             <li><a href="/contact-us">Contact Us</a></li>
-            <li><a href="/login">Admin Login</a></li>
+            <li><a href="/adminlogin">Admin Login</a></li>
           </ul>
         </div>
 

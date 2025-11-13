@@ -204,8 +204,9 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Auth route - POST /login
-app.post("/login", (req, res) => {
+// Admin login route - POST /adminlogin
+// (moved from /login to keep admin/artist login separate from public user login)
+app.post("/adminlogin", (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -216,8 +217,8 @@ app.post("/login", (req, res) => {
     }
 
     // Check against environment variables
-    const artistEmail = process.env.ARTIST_EMAIL;
-    const artistPassword = process.env.ARTIST_PASSWORD;
+  const artistEmail = process.env.ARTIST_EMAIL;
+  const artistPassword = process.env.ARTIST_PASSWORD;
 
     if (email !== artistEmail || password !== artistPassword) {
       res.status(401).json({ error: 'Invalid credentials' });
@@ -238,6 +239,79 @@ app.post("/login", (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==========================
+// USER AUTH - Public /signup and /login endpoints
+// ==========================
+import crypto from 'crypto';
+
+// POST /signup - create a new user (email + password) and optional profile fields
+app.post('/signup', async (req, res) => {
+  try {
+    const { name, email, password, mobno, address } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if user exists
+    const existing = await prisma.user.findUnique({ where: { email } }).catch(() => null);
+    if (existing) return res.status(409).json({ error: 'User already exists' });
+
+    // Create a per-user salt and hash the password using SHA-256
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hashed = crypto.createHash('sha256').update(salt + password).digest('hex');
+
+    const user = await prisma.user.create({
+      data: {
+        name: name || null,
+        email,
+        // store as "salt$hash"
+        password: `${salt}$${hashed}`,
+        mobno: mobno || null,
+        address: address || null,
+        orderSummary: []
+      }
+    });
+
+    // Do not return password
+    const { password: _p, ...publicUser } = (user as any);
+
+    // Create JWT for user
+    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' });
+
+    res.status(201).json({ message: 'Signup successful', token, user: publicUser });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /login - public user login (email + password)
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+  // Stored password format: salt$hash
+  const parts = (user.password || '').split('$');
+  if (parts.length !== 2) return res.status(500).json({ error: 'Invalid password storage format' });
+  const [salt, storedHash] = parts;
+  const attemptHash = crypto.createHash('sha256').update(salt + password).digest('hex');
+  if (attemptHash !== storedHash) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET || 'devsecret', { expiresIn: '7d' });
+
+    const { password: _p, ...publicUser } = (user as any);
+    res.json({ message: 'Login successful', token, user: publicUser });
+  } catch (err) {
+    console.error('User login error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

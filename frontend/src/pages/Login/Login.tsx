@@ -26,7 +26,11 @@ export default function Login() {
         try {
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://art-with-sucha.onrender.com';
             const backendClean = backendUrl.replace(/\/+$/g, '');
-            const response = await fetch(`${backendClean}/login`, {
+            // Decide endpoint based on current path: admin login moved to /adminlogin
+            const isAdminPath = window.location.pathname === '/adminlogin';
+            const endpoint = isAdminPath ? '/adminlogin' : '/login';
+
+            const response = await fetch(`${backendClean}${endpoint}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -37,8 +41,16 @@ export default function Login() {
             const data = await response.json();
 
             if (response.ok) {
-                localStorage.setItem('artistToken', data.token);
-                localStorage.setItem('artistEmail', data.artist.email);
+                if (isAdminPath) {
+                    // Admin/artist login
+                    localStorage.setItem('artistToken', data.token);
+                    localStorage.setItem('artistEmail', data.artist?.email || formData.email);
+                } else {
+                    // Public user login
+                    localStorage.setItem('userToken', data.token);
+                    localStorage.setItem('userName', data.user?.name || data.user?.email || formData.email);
+                    localStorage.setItem('userEmail', data.user?.email || formData.email);
+                }
                 // Redirect to home page
                 window.location.href = '/';
             } else {
