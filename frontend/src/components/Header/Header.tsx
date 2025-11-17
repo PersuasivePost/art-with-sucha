@@ -24,6 +24,28 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     const uName = localStorage.getItem("userName");
     setUserLoggedIn(!!userToken);
     setUserName(uName);
+    // If redirected from Google OAuth, frontend receives token and userName in query params
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const redirectedToken = params.get("userToken");
+      const redirectedName = params.get("userName");
+      if (redirectedToken) {
+        localStorage.setItem("userToken", redirectedToken);
+        if (redirectedName) localStorage.setItem("userName", redirectedName);
+        // update state to reflect login
+        setUserLoggedIn(true);
+        setUserName(redirectedName);
+        // remove params from URL for cleanliness
+        params.delete("userToken");
+        params.delete("userName");
+        const url =
+          window.location.pathname +
+          (params.toString() ? `?${params.toString()}` : "");
+        window.history.replaceState({}, document.title, url);
+      }
+    } catch (e) {
+      /* ignore URL parsing errors */
+    }
   }, []);
 
   const handleLogout = () => {
@@ -138,6 +160,9 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           <Link to="/">
             <img src="/logo.png" alt="Art Gallery Logo" />
           </Link>
+          {userLoggedIn && userName ? (
+            <span style={{ marginLeft: 12, fontWeight: 600 }}>{userName}</span>
+          ) : null}
         </div>
 
         {/* Nav Links + Search */}

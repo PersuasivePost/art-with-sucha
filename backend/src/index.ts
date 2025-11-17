@@ -279,57 +279,57 @@ app.post("/adminlogin", (req, res) => {
 import crypto from "crypto";
 
 // POST /signup - create a new user (email + password) and optional profile fields
-app.post("/signup", async (req, res) => {
-  try {
-    const { name, email, password, mobno, address } = req.body;
+// app.post("/signup", async (req, res) => {
+//   try {
+//     const { name, email, password, mobno, address } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
+//     if (!email || !password) {
+//       return res.status(400).json({ error: "Email and password are required" });
+//     }
 
-    // Check if user exists
-    const existing = await prisma.user
-      .findUnique({ where: { email } })
-      .catch(() => null);
-    if (existing) return res.status(409).json({ error: "User already exists" });
+//     // Check if user exists
+//     const existing = await prisma.user
+//       .findUnique({ where: { email } })
+//       .catch(() => null);
+//     if (existing) return res.status(409).json({ error: "User already exists" });
 
-    // Create a per-user salt and hash the password using SHA-256
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hashed = crypto
-      .createHash("sha256")
-      .update(salt + password)
-      .digest("hex");
+//     // Create a per-user salt and hash the password using SHA-256
+//     const salt = crypto.randomBytes(16).toString("hex");
+//     const hashed = crypto
+//       .createHash("sha256")
+//       .update(salt + password)
+//       .digest("hex");
 
-    const user = await prisma.user.create({
-      data: {
-        name: name || null,
-        email,
-        // store as "salt$hash"
-        password: `${salt}$${hashed}`,
-        mobno: mobno || null,
-        address: address || null,
-        orderSummary: [],
-      },
-    });
+//     const user = await prisma.user.create({
+//       data: {
+//         name: name || null,
+//         email,
+//         // store as "salt$hash"
+//         password: `${salt}$${hashed}`,
+//         mobno: mobno || null,
+//         address: address || null,
+//         orderSummary: [],
+//       },
+//     });
 
-    // Do not return password
-    const { password: _p, ...publicUser } = user as any;
+//     // Do not return password
+//     const { password: _p, ...publicUser } = user as any;
 
-    // Create JWT for user
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || "devsecret",
-      { expiresIn: "7d" }
-    );
+//     // Create JWT for user
+//     const token = jwt.sign(
+//       { userId: user.id, email: user.email },
+//       process.env.JWT_SECRET || "devsecret",
+//       { expiresIn: "7d" }
+//     );
 
-    res
-      .status(201)
-      .json({ message: "Signup successful", token, user: publicUser });
-  } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+//     res
+//       .status(201)
+//       .json({ message: "Signup successful", token, user: publicUser });
+//   } catch (err) {
+//     console.error("Signup error:", err);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// });
 
 // POST /login - public user login (email + password)
 app.post("/login", async (req, res) => {
@@ -983,12 +983,9 @@ app.post(
       }
 
       if (!sectionName || !subsectionName || !title || !price) {
-        res
-          .status(400)
-          .json({
-            error:
-              "Section name, subsection name, title, and price are required",
-          });
+        res.status(400).json({
+          error: "Section name, subsection name, title, and price are required",
+        });
         return;
       }
 
@@ -1245,11 +1242,9 @@ app.put(
       const imageFiles = (req.files as Express.Multer.File[]) || [];
 
       if (!sectionName || !subsectionName || !id) {
-        res
-          .status(400)
-          .json({
-            error: "Section name, subsection name, and product ID are required",
-          });
+        res.status(400).json({
+          error: "Section name, subsection name, and product ID are required",
+        });
         return;
       }
 
@@ -1289,11 +1284,9 @@ app.put(
         productMainSection?.name === sectionName ||
         productMainSection?.name === actualSectionName;
       if (!isCorrectSubsection || !isCorrectMainSection) {
-        res
-          .status(404)
-          .json({
-            error: "Product not found in the specified section/subsection",
-          });
+        res.status(404).json({
+          error: "Product not found in the specified section/subsection",
+        });
         return;
       }
 
@@ -1443,11 +1436,9 @@ app.delete(
       const { sectionName, subsectionName, id } = req.params;
 
       if (!sectionName || !subsectionName || !id) {
-        res
-          .status(400)
-          .json({
-            error: "Section name, subsection name, and product ID are required",
-          });
+        res.status(400).json({
+          error: "Section name, subsection name, and product ID are required",
+        });
         return;
       }
 
@@ -1502,11 +1493,9 @@ app.delete(
         productMainSection?.name === actualSectionName;
 
       if (!isCorrectSubsection || !isCorrectMainSection) {
-        res
-          .status(404)
-          .json({
-            error: "Product not found in the specified section/subsection",
-          });
+        res.status(404).json({
+          error: "Product not found in the specified section/subsection",
+        });
         return;
       }
 
@@ -1564,4 +1553,140 @@ app.get(/^\/image\/(.+)$/, (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
+});
+
+// -------------------------
+// Google OAuth2 endpoints
+// -------------------------
+// Requires these env vars:
+// GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FRONTEND_URL (e.g. http://localhost:5173)
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// Redirect user to Google's OAuth2 consent screen
+app.get("/auth/google/login", (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = `${req.protocol}://${req.get(
+    "host"
+  )}/auth/google/callback`;
+  if (!clientId) {
+    return res.status(500).send("Google client ID not configured");
+  }
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid email profile",
+    prompt: "select_account",
+    access_type: "offline",
+  });
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  res.redirect(authUrl);
+});
+
+// OAuth2 callback - exchange code for tokens, fetch user info, create/find user, issue JWT, redirect
+app.get("/auth/google/callback", async (req, res) => {
+  try {
+    const code = req.query.code as string | undefined;
+    if (!code) return res.status(400).send("Missing code");
+
+    const clientId = process.env.GOOGLE_CLIENT_ID || "";
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
+    const redirectUri = `${req.protocol}://${req.get(
+      "host"
+    )}/auth/google/callback`;
+
+    if (!clientId || !clientSecret) {
+      console.error("Google client ID/secret not set");
+      return res.status(500).send("Google OAuth not configured on server");
+    }
+
+    // Exchange code for tokens
+    const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenResp.ok) {
+      const text = await tokenResp.text();
+      console.error("Token exchange failed:", tokenResp.status, text);
+      return res.status(502).send("Failed to exchange code for token");
+    }
+
+    const tokenData = await tokenResp.json();
+    const accessToken = tokenData.access_token;
+
+    // Fetch user info
+    const userResp = await fetch(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (!userResp.ok) {
+      const text = await userResp.text();
+      console.error("Userinfo fetch failed:", userResp.status, text);
+      return res.status(502).send("Failed to fetch user info");
+    }
+    const profile = await userResp.json();
+
+    // profile contains: sub (id), email, name, picture, given_name, family_name
+    const email = profile.email as string | undefined;
+    const name = profile.name as string | undefined;
+
+    if (!email) {
+      console.error("Google profile missing email", profile);
+      return res.status(400).send("Google account has no email");
+    }
+
+    // Find or create user in DB
+    let user = await prisma.user
+      .findUnique({ where: { email } })
+      .catch(() => null);
+    if (!user) {
+      user = await prisma.user
+        .create({
+          data: {
+            name: name || null,
+            email,
+            // set an unusable password since login happens via Google
+            password: null,
+            mobno: null,
+            address: null,
+            orderSummary: [],
+          } as any,
+        })
+        .catch((e) => {
+          console.error("Failed to create user:", e);
+          return null;
+        });
+    }
+
+    // Issue JWT for frontend use (same secret as other tokens)
+    const jwtSecret = process.env.JWT_SECRET || "devsecret";
+    const token = jwt.sign(
+      { userId: user?.id || null, email, name },
+      jwtSecret,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    // Redirect back to frontend with token and name so frontend can store them in localStorage
+    const redirectTarget = new URL(FRONTEND_URL);
+    redirectTarget.searchParams.set("userToken", token);
+    if (name) redirectTarget.searchParams.set("userName", name);
+
+    return res.redirect(302, redirectTarget.toString());
+  } catch (err) {
+    console.error("Google OAuth callback error:", err);
+    return res.status(500).send("Internal server error during Google OAuth");
+  }
 });

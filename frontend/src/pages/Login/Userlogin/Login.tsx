@@ -4,6 +4,18 @@ import "./Login.css";
 
 export default function Login() {
   const [currentPage, setCurrentPage] = useState("login");
+  const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
+    /\/+$/g,
+    ""
+  );
+  const isLocalFront =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  // Force localhost backend during local frontend development to avoid hitting deployed backend
+  const backendBase = isLocalFront
+    ? import.meta.env.VITE_LOCAL_BACKEND || "http://localhost:5000"
+    : envBackend || "https://art-with-sucha.onrender.com";
 
   // Renders the Login Page view
   const LoginPage = () => (
@@ -21,7 +33,10 @@ export default function Login() {
         {/* Login Card */}
         <div className="login-form">
           {/* Google Login Button */}
-          <a href="/auth/google/login" className="google-login-btn">
+          <a
+            href={`${backendBase}/auth/google/login`}
+            className="google-login-btn"
+          >
             <svg className="google-icon" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
@@ -109,7 +124,10 @@ export default function Login() {
 
         {/* Signup Card */}
         <div className="signup-form">
-          <a href="/auth/google/login" className="google-signup-btn">
+          <a
+            href={`${backendBase}/auth/google/login`}
+            className="google-signup-btn"
+          >
             <svg className="google-signup-icon" viewBox="0 0 24 24">
               <path
                 fill="#4285F4"
