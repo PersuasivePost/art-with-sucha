@@ -1,9 +1,0 @@
-urgent changes in navbar:
-1. add cart image after login in navbar 
-2. after login is successful change login text to dashboard
-3. after clicking dashboard, a similar font dropdown should appear which consists of:
-a. my profile
-b. my orders
-c. wishlist
-4. remove what we currently see after login near: 'welcome to my art page' text
-5. remove name next to logo
