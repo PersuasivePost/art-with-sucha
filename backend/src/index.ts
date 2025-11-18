@@ -279,57 +279,91 @@ app.post("/adminlogin", (req, res) => {
 import crypto from "crypto";
 
 // POST /signup - create a new user (email + password) and optional profile fields
-// app.post("/signup", async (req, res) => {
-//   try {
-//     const { name, email, password, mobno, address } = req.body;
+app.post("/signup", async (req, res) => {
+  try {
+    console.log("Signup payload:", req.body);
+    const { name, email, password, mobno, address } = req.body;
 
-//     if (!email || !password) {
-//       return res.status(400).json({ error: "Email and password are required" });
-//     }
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
 
-//     // Check if user exists
-//     const existing = await prisma.user
-//       .findUnique({ where: { email } })
-//       .catch(() => null);
-//     if (existing) return res.status(409).json({ error: "User already exists" });
+    // Check if user exists
+    const existing = await prisma.user
+      .findUnique({ where: { email } })
+      .catch(() => null);
+    if (existing) return res.status(409).json({ error: "User already exists" });
 
-//     // Create a per-user salt and hash the password using SHA-256
-//     const salt = crypto.randomBytes(16).toString("hex");
-//     const hashed = crypto
-//       .createHash("sha256")
-//       .update(salt + password)
-//       .digest("hex");
+    // Create a per-user salt and hash the password using SHA-256
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hashed = crypto
+      .createHash("sha256")
+      .update(salt + password)
+      .digest("hex");
 
-//     const user = await prisma.user.create({
-//       data: {
-//         name: name || null,
-//         email,
-//         // store as "salt$hash"
-//         password: `${salt}$${hashed}`,
-//         mobno: mobno || null,
-//         address: address || null,
-//         orderSummary: [],
-//       },
-//     });
+    const user = await prisma.user.create({
+      data: {
+        name: name || null,
+        email,
+        // store as "salt$hash"
+        password: `${salt}$${hashed}`,
+        mobno: mobno || null,
+        address: address || null,
+        orderSummary: [],
+      },
+    });
 
-//     // Do not return password
-//     const { password: _p, ...publicUser } = user as any;
+    // Do not return password
+    const { password: _p, ...publicUser } = user as any;
 
-//     // Create JWT for user
-//     const token = jwt.sign(
-//       { userId: user.id, email: user.email },
-//       process.env.JWT_SECRET || "devsecret",
-//       { expiresIn: "7d" }
-//     );
+    // Create JWT for user
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || "devsecret",
+      {
+        expiresIn: "7d",
+      }
+    );
 
-//     res
-//       .status(201)
-//       .json({ message: "Signup successful", token, user: publicUser });
-//   } catch (err) {
-//     console.error("Signup error:", err);
-//     res.status(500).json({ error: "Internal server error" });
-//   }
-// });
+    res
+      .status(201)
+      .json({ message: "Signup successful", token, user: publicUser });
+  } catch (err) {
+    // Log full error stack for debugging
+    console.error("Signup error:", err && ((err as any).stack || err));
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// If someone visits /signup in a browser, redirect them to the frontend login page
+app.get("/signup", (req, res) => {
+  try {
+    const frontend = process.env.FRONTEND_URL;
+    const target = frontend ? `${frontend.replace(/\/$/, "")}/login` : "/login";
+
+    // For HEAD requests (health checks / curl -I) return a standard 302 with Location header
+    if (req.method === "HEAD") {
+      return res.redirect(302, target);
+    }
+
+    res.status(200).set("Location", target).send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0;url=${target}" />
+    <title>Redirecting...</title>
+    <style>body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:2rem}</style>
+  </head>
+  <body>
+    <p>Redirecting to the login page. If you are not redirected automatically, <a href="${target}">click here</a>.</p>
+  <script>location.replace(${JSON.stringify(target)});</script>
+  </body>
+</html>`);
+  } catch (err) {
+    console.error("Error redirecting /signup:", (err as any)?.stack || err);
+    return res.status(500).send("Redirect failed");
+  }
+});
 
 // POST /login - public user login (email + password)
 app.post("/login", async (req, res) => {
@@ -1651,13 +1685,20 @@ app.get("/auth/google/callback", async (req, res) => {
       .findUnique({ where: { email } })
       .catch(() => null);
     if (!user) {
+      // Generate a random unusable password stored as salt$hash to satisfy schema
+      const randomPass = crypto.randomBytes(24).toString("hex");
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hashed = crypto
+        .createHash("sha256")
+        .update(salt + randomPass)
+        .digest("hex");
+      const storedPassword = `${salt}$${hashed}`;
       user = await prisma.user
         .create({
           data: {
             name: name || null,
             email,
-            // set an unusable password since login happens via Google
-            password: null,
+            password: storedPassword,
             mobno: null,
             address: null,
             orderSummary: [],
