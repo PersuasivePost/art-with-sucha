@@ -13,7 +13,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("artistToken");
@@ -107,39 +107,6 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
         <span className="welcome-text">Welcome to my Art Gallery!</span>
 
         <div className="auth-status">
-          {/* User status (public shoppers) */}
-          {userLoggedIn ? (
-            <div className="user-area">
-              <span className="user-greet">heyy {userName}</span>
-              <button className="cart-btn" title="Cart">
-                🛒
-              </button>
-              <div className="profile-wrapper">
-                <button
-                  className="profile-toggle"
-                  onClick={() => setProfileOpen(!profileOpen)}
-                >
-                  👤
-                </button>
-                {profileOpen ? (
-                  <div className="profile-menu">
-                    <a href="/my-account">My profile</a>
-                    <a href="/my-orders">My orders</a>
-                    <button onClick={handleUserLogout}>Logout</button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : // ) : (
-          //   // Show login/signup links for users when not logged in
-          //   <div className="user-auth-links">
-          //     <a href="/login">Login</a>
-          //     <a href="/signup">Sign up</a>
-          //   </div>
-          // )}
-          null}
-
-          {/* Artist/admin status (separate) */}
           {isLoggedIn ? (
             <>
               {artistEmail ? (
@@ -160,9 +127,6 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           <Link to="/">
             <img src="/logo.png" alt="Art Gallery Logo" />
           </Link>
-          {userLoggedIn && userName ? (
-            <span style={{ marginLeft: 12, fontWeight: 600 }}>{userName}</span>
-          ) : null}
         </div>
 
         {/* Nav Links + Search */}
@@ -204,7 +168,35 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           <nav className={`nav-links ${menuOpen ? "open" : ""}`}>
             <Link to="/about-us">About Us</Link>
             <Link to="/contact-us">Contact Us</Link>
-            <Link to="/login">Login</Link>
+            {userLoggedIn ? (
+              <div
+                className="nav-dashboard-group"
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                <div className="dashboard-wrapper">
+                  <button
+                    className="dashboard-toggle"
+                    onClick={() => setDashboardOpen(!dashboardOpen)}
+                    aria-expanded={dashboardOpen}
+                  >
+                    Dashboard ▾
+                  </button>
+                  {dashboardOpen ? (
+                    <div className="dashboard-menu">
+                      <a href="/my-account">My Profile</a>
+                      <a href="/my-orders">My Orders</a>
+                      <a href="/wishlist">Wishlist</a>
+                      <button onClick={handleUserLogout}>Logout</button>
+                    </div>
+                  ) : null}
+                </div>
+                <button className="cart-btn" title="Cart">
+                  <img src="/cart.png" alt="Cart" style={{ height: 20 }} />
+                </button>
+              </div>
+            ) : (
+              <Link to="/login">Login</Link>
+            )}
           </nav>
           <div className="search-box">
             <input
