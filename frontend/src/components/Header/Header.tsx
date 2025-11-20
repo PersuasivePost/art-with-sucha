@@ -11,7 +11,6 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [artistEmail, setArtistEmail] = useState<string | null>(null);
   const [userLoggedIn, setUserLoggedIn] = useState(false);
-  const [userName, setUserName] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
 
@@ -21,20 +20,15 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     setIsLoggedIn(!!token);
     setArtistEmail(email);
     const userToken = localStorage.getItem("userToken");
-    const uName = localStorage.getItem("userName");
     setUserLoggedIn(!!userToken);
-    setUserName(uName);
     // If redirected from Google OAuth, frontend receives token and userName in query params
     try {
       const params = new URLSearchParams(window.location.search);
       const redirectedToken = params.get("userToken");
-      const redirectedName = params.get("userName");
       if (redirectedToken) {
         localStorage.setItem("userToken", redirectedToken);
-        if (redirectedName) localStorage.setItem("userName", redirectedName);
         // update state to reflect login
         setUserLoggedIn(true);
-        setUserName(redirectedName);
         // remove params from URL for cleanliness
         params.delete("userToken");
         params.delete("userName");
@@ -55,14 +49,12 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     setArtistEmail(null);
     // reload to update UI or navigate home
     window.location.href = "/";
-  };
+  };  
 
   const handleUserLogout = () => {
     localStorage.removeItem("userToken");
-    localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
     setUserLoggedIn(false);
-    setUserName(null);
     window.location.href = "/";
   };
 
@@ -90,6 +82,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           <a
             href="https://www.instagram.com/artwithsucha/"
             target="_blank"
+            rel="noreferrer"
             className="social-icon instagram"
             aria-label="Instagram"
           >
@@ -169,10 +162,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
             <Link to="/about-us">About Us</Link>
             <Link to="/contact-us">Contact Us</Link>
             {userLoggedIn ? (
-              <div
-                className="nav-dashboard-group"
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
-              >
+              <div className="nav-dashboard-group">
                 <div className="dashboard-wrapper">
                   <button
                     className="dashboard-toggle"
@@ -181,18 +171,18 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
                   >
                     Dashboard ▾
                   </button>
-                  {dashboardOpen ? (
+                  {dashboardOpen && (
                     <div className="dashboard-menu">
-                      <a href="/my-account">My Profile</a>
-                      <a href="/my-orders">My Orders</a>
-                      <a href="/wishlist">Wishlist</a>
+                      <Link to="/profile">My Profile</Link>
+                      <Link to="/orders">My Orders</Link>
+                      <Link to="/wishlist">Wishlist</Link>
                       <button onClick={handleUserLogout}>Logout</button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
-                <button className="cart-btn" title="Cart">
-                  <img src="/cart.png" alt="Cart" style={{ height: 20 }} />
-                </button>
+                <Link to="/cart" className="cart-btn" title="Cart">
+                  <img src="/cart.png" alt="Cart" />
+                </Link>
               </div>
             ) : (
               <Link to="/login">Login</Link>
