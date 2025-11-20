@@ -6,6 +6,11 @@ import About from "../pages/AboutUs/About";
 import Contact from "../pages/ContactUs/Contact";
 import SectionView from "../pages/Gallery/Section/SectionView";
 import ProductView from "../pages/Gallery/Product/ProductView";
+import Profile from "../pages/Profile/Profile";
+import Cart from "../pages/Cart/Cart";
+import Orders from "../pages/Orders/Orders";
+import Wishlist from "../pages/Wishlist/Wishlist";
+import ProtectedRoute from "./ProtectedRoute";
 
 const AppRouter = () => {
   return (
@@ -16,6 +21,39 @@ const AppRouter = () => {
       <Route path="/adminlogin" element={<AdminLogin />} />
       <Route path="/about-us" element={<About />} />
       <Route path="/contact-us" element={<Contact />} />
+      {/* Protected routes - redirect to login if not authenticated */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cart"
+        element={
+          <ProtectedRoute>
+            <Cart />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/orders"
+        element={
+          <ProtectedRoute>
+            <Orders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wishlist"
+        element={
+          <ProtectedRoute>
+            <Wishlist />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/:sectionName" element={<SectionView />} />
       <Route path="/:sectionName/:subsectionName" element={<ProductView />} />
       {/* Catch-all route for unknown paths - redirect to home */}
