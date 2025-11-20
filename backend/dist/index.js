@@ -11,6 +11,8 @@ import path from "path";
 import fs from "fs";
 const fsPromises = fs.promises;
 import { uploadFile, uploadMultipleFiles, getImageUrl, getMultipleImageUrls, getStorageType, } from "./utils/storageAdapter.js";
+import cartRoutes from "./routes/cart.js";
+import orderRoutes from "./routes/orders.js";
 // Load environment variables
 dotenv.config();
 // Log the storage mode at startup
@@ -115,6 +117,9 @@ app.use(cors({
     credentials: true,
 }));
 app.use(express.json());
+// Mount cart and order routes
+app.use("/cart", cartRoutes);
+app.use("/orders", orderRoutes);
 // Lightweight health endpoint to quickly verify the server is alive
 app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -344,7 +349,7 @@ const authenticateArtist = (req, res, next) => {
     }
 };
 // Test protected route
-app.get("/api/test", authenticateArtist, (req, res) => {
+app.get("/test", authenticateArtist, (req, res) => {
     res.json({ message: "Protected route works!", artist: req.artist });
 });
 // Helper function to create URL-friendly slugs

@@ -21,12 +21,15 @@ import {
   getMultipleImageUrls,
   getStorageType,
 } from "./utils/storageAdapter.js";
+import cartRoutes from "./routes/cart.js";
+import orderRoutes from "./routes/orders.js";
 
-// Extend Express Request type to include artist property
+// Extend Express Request type to include artist and user properties
 declare global {
   namespace Express {
     interface Request {
       artist?: { email: string };
+      user?: { userId: number; email: string };
     }
   }
 }
@@ -154,6 +157,10 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Mount cart and order routes
+app.use("/cart", cartRoutes);
+app.use("/orders", orderRoutes);
 
 // Lightweight health endpoint to quickly verify the server is alive
 app.get("/health", (req, res) => {
@@ -436,7 +443,7 @@ const authenticateArtist = (
 };
 
 // Test protected route
-app.get("/api/test", authenticateArtist, (req, res) => {
+app.get("/test", authenticateArtist, (req, res) => {
   res.json({ message: "Protected route works!", artist: req.artist });
 });
 
