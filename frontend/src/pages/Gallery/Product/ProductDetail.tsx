@@ -182,6 +182,9 @@ export default function ProductDetail() {
       } else {
         await fetchCartForProduct();
       }
+      try {
+        localStorage.setItem("cartUpdated", String(Date.now()));
+      } catch {}
       setCartNotice("Cart updated");
       setTimeout(() => setCartNotice(null), 1400);
     } catch (e) {
@@ -290,6 +293,9 @@ export default function ProductDetail() {
         await fetchCartForProduct();
         setCartNotice("Removed from cart");
         setTimeout(() => setCartNotice(null), 1400);
+        try {
+          localStorage.setItem("cartUpdated", String(Date.now()));
+        } catch {}
       } else {
         // try update
         let idToUpdate = serverFound?.id ?? cartItemId;
@@ -326,6 +332,9 @@ export default function ProductDetail() {
                 } else {
                   await fetchCartForProduct();
                 }
+                try {
+                  localStorage.setItem("cartUpdated", String(Date.now()));
+                } catch {}
               } else {
                 await fetchCartForProduct();
                 setCartNotice("Failed to update cart");
@@ -368,6 +377,9 @@ export default function ProductDetail() {
             } else {
               await fetchCartForProduct();
             }
+            try {
+              localStorage.setItem("cartUpdated", String(Date.now()));
+            } catch {}
           }
         }
         setCartNotice("Cart updated");

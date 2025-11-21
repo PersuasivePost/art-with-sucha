@@ -13,6 +13,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
   const [userLoggedIn, setUserLoggedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("artistToken");
@@ -40,7 +41,58 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     } catch (e) {
       /* ignore URL parsing errors */
     }
+    // fetch cart count when header initializes
+    fetchCartCount();
   }, []);
+
+  // fetch cart total quantity for badge
+  const fetchCartCount = async () => {
+    try {
+      const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
+        /\/+$/g,
+        ""
+      );
+      const isLocalFront =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      const backendBase = isLocalFront
+        ? import.meta.env.VITE_LOCAL_BACKEND || "http://localhost:5000"
+        : envBackend || "https://art-with-sucha.onrender.com";
+      const backendUrl = backendBase.replace(/\/+$/g, "");
+      const token = localStorage.getItem("userToken");
+      if (!token) {
+        setCartCount(0);
+        return;
+      }
+      const res = await fetch(`${backendUrl}/cart`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setCartCount(0);
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      const total = (data.cartItems || []).reduce(
+        (s: number, it: any) => s + (it.quantity || 0),
+        0
+      );
+      setCartCount(total || 0);
+    } catch (err) {
+      setCartCount(0);
+    }
+  };
+
+  // refresh cart count when user logs in/out or in other tabs
+  useEffect(() => {
+    fetchCartCount();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "userToken" || e.key === "cartUpdated") fetchCartCount();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLoggedIn]);
 
   const handleLogout = () => {
     localStorage.removeItem("artistToken");
@@ -182,7 +234,27 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
                   )}
                 </div>
                 <Link to="/cart" className="cart-btn" title="Cart">
-                  <img src="/cart.png" alt="Cart" />
+                  <div className="cart-badge-wrapper" aria-hidden={false}>
+                    {/* Inline SVG cart icon - scales nicely with badge */}
+                    <svg
+                      className="cart-icon-svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      role="img"
+                      aria-label="Cart"
+                    >
+                      <path
+                        d="M7 4h-2l-1 2v2h2l3.6 7.59-1.35 2.44A1 1 0 0 0 9 19h9v-2H9.42a.25.25 0 0 1-.23-.15L9.1 16h7.45a1 1 0 0 0 .92-.62l1.72-4.58A1 1 0 0 0 18.3 9H7.21l-.94-2H3V4h4z"
+                        fill="#0b1220"
+                      />
+                      <circle cx="10" cy="21" r="1" fill="#0b1220" />
+                      <circle cx="18" cy="21" r="1" fill="#0b1220" />
+                    </svg>
+                    {cartCount > 0 && (
+                      <span className="cart-count-badge">{cartCount}</span>
+                    )}
+                  </div>
                 </Link>
               </div>
             ) : (

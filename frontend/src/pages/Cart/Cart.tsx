@@ -77,6 +77,10 @@ export default function Cart() {
       });
       if (!res.ok) throw new Error("Failed to update quantity");
       await fetchCart();
+      // notify other components/tabs to refresh cart badge
+      try {
+        localStorage.setItem("cartUpdated", String(Date.now()));
+      } catch {}
     } catch (e) {
       console.error(e);
     }
@@ -92,6 +96,9 @@ export default function Cart() {
       });
       if (!res.ok) throw new Error("Failed to remove item");
       await fetchCart();
+      try {
+        localStorage.setItem("cartUpdated", String(Date.now()));
+      } catch {}
     } catch (e) {
       console.error(e);
     }
@@ -113,6 +120,9 @@ export default function Cart() {
       });
       if (!res.ok) throw new Error("Failed to clear cart");
       await fetchCart();
+      try {
+        localStorage.setItem("cartUpdated", String(Date.now()));
+      } catch {}
     } catch (e) {
       console.error(e);
       // optionally show inline error
