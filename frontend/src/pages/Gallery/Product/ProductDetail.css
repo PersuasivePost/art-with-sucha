@@ -9,15 +9,41 @@
 }
 .pdp-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+  grid-template-columns: 520px 1fr;
+  gap: 2.5rem;
   align-items: start;
 }
-.pdp-image img {
+
+.pdp-image {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pdp-main-image-container {
+  width: 420px;
+  height: 560px;
+  overflow: hidden;
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(2, 6, 23, 0.12);
+  background: linear-gradient(180deg, #ffffff, #fafafa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdp-main-img {
   width: 100%;
   height: auto;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 160ms;
+  transform-origin: 50% 50%;
+  cursor: zoom-in;
+  will-change: transform;
+}
+
+.pdp-main-image-container:hover .pdp-main-img {
+  transform: scale(2.1);
+  cursor: zoom-in;
 }
 .pdp-title {
   font-size: 1.8rem;
@@ -52,6 +78,9 @@
   cursor: pointer;
   font-weight: 600;
 }
+.pdp-actions {
+  margin-top: 1.2rem;
+}
 .pdp-placeholder {
   background: #eee;
   height: 360px;
@@ -61,12 +90,54 @@
   color: #666;
   border-radius: 8px;
 }
+
+/* Thumbnail column */
+.pdp-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-right: 0.4rem;
+  align-items: center;
+}
+
+.pdp-thumb-btn {
+  width: 72px;
+  height: 72px;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 160ms, box-shadow 160ms, border-color 160ms;
+}
+
+.pdp-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.pdp-thumb-btn.active {
+  transform: translateX(-3px);
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.12);
+  border-color: #111827;
+}
 @media (max-width: 800px) {
   .pdp-grid {
     grid-template-columns: 1fr;
   }
-  .pdp-image img,
-  .pdp-placeholder {
+  .pdp-image {
+    flex-direction: column;
+  }
+  .pdp-main-image-container {
+    width: 100%;
     height: auto;
+  }
+  .pdp-main-img {
+    transform: none !important;
   }
 }

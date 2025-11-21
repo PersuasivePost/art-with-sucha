@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "../../../components/Header/Header";
+import ImageModal from "../../../components/ImageModal/ImageModal";
 import Footer from "../../../components/Footer/Footer";
 import "./ProductDetail.css";
 import { resolveImageUrl } from "../../../utils/image";
@@ -10,6 +11,10 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const mainImgRef = useRef<HTMLImageElement | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imageModalUrl, setImageModalUrl] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +45,21 @@ export default function ProductDetail() {
     };
     fetchProduct();
   }, [id]);
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const img = mainImgRef.current;
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    img.style.transformOrigin = `${x}% ${y}%`;
+  };
+
+  const handleMouseLeave = () => {
+    const img = mainImgRef.current;
+    if (!img) return;
+    img.style.transformOrigin = `50% 50%`;
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -72,15 +92,63 @@ export default function ProductDetail() {
       <main className="pdp-main">
         <div className="pdp-grid">
           <div className="pdp-image">
-            {product.images && product.images[0] ? (
-              <img
-                src={
-                  typeof product.images[0] === "string"
-                    ? resolveImageUrl(product.images[0])
-                    : product.images[0].signedUrl || product.images[0].url
-                }
-                alt={product.title}
-              />
+            {/* Thumbnails column (left) */}
+            {product.images && product.images.length > 1 && (
+              <div
+                className="pdp-thumbs"
+                role="tablist"
+                aria-orientation="vertical"
+              >
+                {product.images.map((img: any, idx: number) => {
+                  const src =
+                    typeof img === "string"
+                      ? resolveImageUrl(img)
+                      : img.signedUrl || img.url;
+                  return (
+                    <button
+                      key={idx}
+                      className={`pdp-thumb-btn ${
+                        idx === selectedIndex ? "active" : ""
+                      }`}
+                      onClick={() => setSelectedIndex(idx)}
+                      aria-selected={idx === selectedIndex}
+                      title={`View image ${idx + 1}`}
+                    >
+                      <img src={src} alt={`Thumbnail ${idx + 1}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Main image with hover-zoom */}
+            {product.images && product.images[selectedIndex] ? (
+              <div
+                className="pdp-main-image-container"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <img
+                  ref={mainImgRef}
+                  className="pdp-main-img"
+                  src={
+                    typeof product.images[selectedIndex] === "string"
+                      ? resolveImageUrl(product.images[selectedIndex])
+                      : product.images[selectedIndex].signedUrl ||
+                        product.images[selectedIndex].url
+                  }
+                  alt={product.title}
+                  onClick={() => {
+                    const src =
+                      typeof product.images[selectedIndex] === "string"
+                        ? resolveImageUrl(product.images[selectedIndex])
+                        : product.images[selectedIndex].signedUrl ||
+                          product.images[selectedIndex].url;
+                    setImageModalUrl(src);
+                    setImageModalOpen(true);
+                  }}
+                />
+              </div>
             ) : (
               <div className="pdp-placeholder">No image</div>
             )}
@@ -148,6 +216,12 @@ export default function ProductDetail() {
         </div>
       </main>
       <Footer />
+      <ImageModal
+        isOpen={imageModalOpen}
+        imageUrl={imageModalUrl}
+        altText={product?.title || "Image"}
+        onClose={() => setImageModalOpen(false)}
+      />
     </div>
   );
 }
