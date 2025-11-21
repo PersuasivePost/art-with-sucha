@@ -19,6 +19,12 @@ export default function ProductDetail() {
   const mainImgRef = useRef<HTMLImageElement | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
+  // Reviews state
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [canReview, setCanReview] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newMessage, setNewMessage] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +47,36 @@ export default function ProductDetail() {
         if (!res.ok) throw new Error("Failed to load product");
         const data = await res.json();
         setProduct(data.product || null);
+        // Fetch reviews for this product
+        try {
+          const revRes = await fetch(
+            `${backend}/reviews/${encodeURIComponent(id)}`
+          );
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            setReviews(revData.reviews || []);
+          }
+        } catch (err) {
+          console.error("Failed to load reviews", err);
+        }
+        // Check if current user can review
+        try {
+          const token = localStorage.getItem("userToken");
+          if (token) {
+            const canRes = await fetch(
+              `${backend}/reviews/can-review/${encodeURIComponent(id)}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              }
+            );
+            if (canRes.ok) {
+              const canData = await canRes.json();
+              setCanReview(!!canData.canReview);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to check review eligibility", err);
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -236,6 +272,117 @@ export default function ProductDetail() {
               >
                 Add to Cart
               </button>
+            </div>
+            {/* Reviews Section */}
+            <div className="pdp-reviews">
+              <h3>Reviews</h3>
+              {reviews.length === 0 ? (
+                <p className="muted">No reviews yet.</p>
+              ) : (
+                <div className="reviews-list">
+                  {reviews.map((r) => (
+                    <div key={r.id} className="review-item">
+                      <div className="review-header">
+                        <strong>{r.user?.name || "User"}</strong>
+                        <span className="review-rating">
+                          {"★".repeat(r.rating)}
+                        </span>
+                      </div>
+                      {r.message && <p className="review-msg">{r.message}</p>}
+                      <div className="review-time">
+                        {new Date(r.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {canReview ? (
+                <div className="review-form">
+                  <h4>Add your review</h4>
+                  <label>
+                    Rating:
+                    <select
+                      value={newRating}
+                      onChange={(e) => setNewRating(Number(e.target.value))}
+                    >
+                      {[5, 4, 3, 2, 1].map((n) => (
+                        <option key={n} value={n}>
+                          {n} star{n > 1 ? "s" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Message:
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                    />
+                  </label>
+                  <div className="review-actions">
+                    <button
+                      onClick={async () => {
+                        setSubmittingReview(true);
+                        try {
+                          const token = localStorage.getItem("userToken");
+                          const envBackend = (
+                            import.meta.env.VITE_BACKEND_URL || ""
+                          ).replace(/\/+$/g, "");
+                          const isLocalFront =
+                            typeof window !== "undefined" &&
+                            (window.location.hostname === "localhost" ||
+                              window.location.hostname === "127.0.0.1");
+                          const backendBase = isLocalFront
+                            ? import.meta.env.VITE_LOCAL_BACKEND ||
+                              "http://localhost:5000"
+                            : envBackend ||
+                              "https://art-with-sucha.onrender.com";
+                          const backend = backendBase.replace(/\/+$/g, "");
+                          const res = await fetch(
+                            `${backend}/reviews/${encodeURIComponent(
+                              String(id)
+                            )}`,
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                rating: newRating,
+                                message: newMessage,
+                              }),
+                            }
+                          );
+                          if (res.ok) {
+                            const d = await res.json();
+                            setReviews([d.review, ...reviews]);
+                            setNewMessage("");
+                            setNewRating(5);
+                            setCanReview(false); // prevent another review
+                          } else {
+                            const t = await res.text();
+                            alert("Failed to submit review: " + t);
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to submit review");
+                        } finally {
+                          setSubmittingReview(false);
+                        }
+                      }}
+                      disabled={submittingReview}
+                    >
+                      {submittingReview ? "Submitting…" : "Submit Review"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="muted">
+                  Only users who purchased this product can add reviews.
+                </p>
+              )}
             </div>
           </div>
         </div>

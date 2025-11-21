@@ -23,6 +23,7 @@ import {
 } from "./utils/storageAdapter.js";
 import cartRoutes from "./routes/cart.js";
 import orderRoutes from "./routes/orders.js";
+import reviewRoutes from "./routes/reviews.js";
 
 // Extend Express Request type to include artist and user properties
 declare global {
@@ -680,6 +681,9 @@ app.get("/product/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch product" });
   }
 });
+
+// Mount reviews before dynamic section routes so /reviews/* is not swallowed
+app.use("/reviews", reviewRoutes);
 
 // GET /:sectionName - Get section details with subsections and products
 app.get("/:sectionName", async (req, res, next) => {
