@@ -57,7 +57,10 @@ const AppRouter = () => {
       />
       <Route path="/:sectionName" element={<SectionView />} />
       <Route path="/:sectionName/:subsectionName" element={<ProductView />} />
-      <Route path="/product/:id" element={<ProductDetail />} />
+      <Route
+        path="/:sectionName/:subsectionName/product/:id"
+        element={<ProductDetail />}
+      />
       {/* Catch-all route for unknown paths - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

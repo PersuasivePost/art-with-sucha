@@ -348,7 +348,11 @@ export default function ProductsView() {
   const handleProductClick = (product: Product) => {
     // Navigate to product detail page using client-side routing
     const idOrSlug = product.id;
-    navigate(`/product/${encodeURIComponent(String(idOrSlug))}`);
+    navigate(
+      `/${encodeURIComponent(sectionName!)}/${encodeURIComponent(
+        subsectionName!
+      )}/product/${encodeURIComponent(String(idOrSlug))}`
+    );
   };
 
   const closeImageModal = () => {

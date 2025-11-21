@@ -7,7 +7,11 @@ import "./ProductDetail.css";
 import { resolveImageUrl } from "../../../utils/image";
 
 export default function ProductDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id, sectionName, subsectionName } = useParams<{
+    sectionName?: string;
+    subsectionName?: string;
+    id: string;
+  }>();
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -154,6 +158,27 @@ export default function ProductDetail() {
             )}
           </div>
           <div className="pdp-details">
+            {(sectionName || subsectionName) && (
+              <div className="pdp-breadcrumbs">
+                {sectionName && (
+                  <a href={`/${encodeURIComponent(sectionName)}`}>
+                    {sectionName}
+                  </a>
+                )}
+                {subsectionName && (
+                  <>
+                    <span> / </span>
+                    <a
+                      href={`/${encodeURIComponent(
+                        sectionName!
+                      )}/${encodeURIComponent(subsectionName)}`}
+                    >
+                      {subsectionName}
+                    </a>
+                  </>
+                )}
+              </div>
+            )}
             <h1 className="pdp-title">{product.title}</h1>
             <div className="pdp-price">{formatPrice(product.price)}</div>
             {product.description && (
