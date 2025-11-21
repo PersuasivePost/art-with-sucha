@@ -49,7 +49,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
     setArtistEmail(null);
     // reload to update UI or navigate home
     window.location.href = "/";
-  };  
+  };
 
   const handleUserLogout = () => {
     localStorage.removeItem("userToken");
@@ -159,6 +159,7 @@ export default function Header({ searchTerm, onSearchChange }: HeaderProps) {
           </button>
 
           <nav className={`nav-links ${menuOpen ? "open" : ""}`}>
+            <Link to="/">Home</Link>
             <Link to="/about-us">About Us</Link>
             <Link to="/contact-us">Contact Us</Link>
             {userLoggedIn ? (
