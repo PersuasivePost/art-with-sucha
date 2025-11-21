@@ -57,6 +57,7 @@ const AppRouter = () => {
       />
       <Route path="/:sectionName" element={<SectionView />} />
       <Route path="/:sectionName/:subsectionName" element={<ProductView />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
       <Route
         path="/:sectionName/:subsectionName/product/:id"
         element={<ProductDetail />}
