@@ -168,6 +168,36 @@ export default function ProductDetail() {
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
               >
+                <div className="image-overlay">
+                  <button
+                    className="view-btn"
+                    onClick={() => {
+                      const src =
+                        typeof product.images[selectedIndex] === "string"
+                          ? resolveImageUrl(product.images[selectedIndex])
+                          : product.images[selectedIndex].signedUrl ||
+                            product.images[selectedIndex].url;
+                      setImageModalUrl(src);
+                      setImageModalOpen(true);
+                    }}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="zoom-btn"
+                    onClick={() => {
+                      const src =
+                        typeof product.images[selectedIndex] === "string"
+                          ? resolveImageUrl(product.images[selectedIndex])
+                          : product.images[selectedIndex].signedUrl ||
+                            product.images[selectedIndex].url;
+                      setImageModalUrl(src);
+                      setImageModalOpen(true);
+                    }}
+                  >
+                    🔍
+                  </button>
+                </div>
                 <img
                   ref={mainImgRef}
                   className="pdp-main-img"

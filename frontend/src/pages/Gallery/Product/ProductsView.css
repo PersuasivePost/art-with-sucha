@@ -4,7 +4,8 @@
   width: 100%;
   margin: 0;
   padding: 0 12px; /* small side padding to match SectionView */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    sans-serif;
   background: #ffffff;
   min-height: 100vh;
 }
@@ -26,7 +27,10 @@
   border-radius: 6px;
 }
 
-.subsection-meta { text-align: center; flex: 1; }
+.subsection-meta {
+  text-align: center;
+  flex: 1;
+}
 
 /* Use the same section title/description styles as SectionView */
 .section-title {
@@ -209,7 +213,7 @@
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
 .product-image {
@@ -235,6 +239,71 @@
 
 .product-card:hover .product-image img {
   transform: scale(1.05);
+}
+
+/* Image overlay (view / zoom) - made visible and polished */
+.image-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 6;
+}
+.product-card:hover .image-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+.view-btn,
+.zoom-btn {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  color: #0b1220;
+  padding: 6px 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.view-btn:hover,
+.zoom-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
+}
+
+/* Posh / luxe visual touches */
+.products-view-container {
+  background: #fbfaf7; /* very light warm cream */
+}
+.section-title {
+  font-family: Georgia, "Times New Roman", "Playfair Display", serif;
+  color: #0b1220;
+  letter-spacing: 0.02em;
+  font-size: 30px;
+}
+.product-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  color: #0b1220;
+  font-size: 18px;
+}
+.product-price {
+  color: #b88a1c; /* warm gold accent */
+  font-weight: 800;
+}
+.product-card {
+  background: linear-gradient(180deg, #fff 0%, #fffaf8 100%);
+  border: 1px solid rgba(184, 138, 28, 0.08);
+}
+.products-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
 }
 
 .placeholder-image {
@@ -446,17 +515,34 @@
 }
 
 /* Additional responsive tweaks */
-@media (max-width: 900px){
-  .products-grid{ grid-template-columns: repeat(2,1fr) }
-  .product-modal{ max-width: 720px }
-  .main-image{ height: 320px }
+@media (max-width: 900px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .product-modal {
+    max-width: 720px;
+  }
+  .main-image {
+    height: 320px;
+  }
 }
 
-@media (max-width: 480px){
-  .products-grid{ grid-template-columns: 1fr }
-  .modal-content{ padding:12px; gap:12px }
-  .main-image{ height: auto; max-height:50vh }
-  .nav-arrow{ width:36px; height:36px }
+@media (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal-content {
+    padding: 12px;
+    gap: 12px;
+  }
+  .main-image {
+    height: auto;
+    max-height: 50vh;
+  }
+  .nav-arrow {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .thumbnail {

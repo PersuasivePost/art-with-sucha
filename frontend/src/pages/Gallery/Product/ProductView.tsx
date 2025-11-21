@@ -355,6 +355,17 @@ export default function ProductsView() {
     );
   };
 
+  const handleImageClick = (product: Product, idx = 0) => {
+    const img = product.images && product.images[idx];
+    if (!img) return;
+    const src =
+      typeof img === "string"
+        ? getImageUrl(img)
+        : getImageUrl((img as any).url || (img as any).signedUrl);
+    setImageModalUrl(src);
+    setImageModalOpen(true);
+  };
+
   const closeImageModal = () => {
     setImageModalOpen(false);
     setImageModalUrl("");
@@ -488,19 +499,32 @@ export default function ProductsView() {
         ) : (
           filteredProducts.map((product) => (
             <div key={product.id} className="product-card">
-              <div
-                className="product-image"
-                onClick={() => handleProductClick(product)}
-              >
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={getImageUrl(product.images[0])}
-                    alt={product.title}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="placeholder-image">No Image</div>
-                )}
+              <div className="product-image">
+                <div className="image-overlay">
+                  <button
+                    className="view-btn"
+                    onClick={() => handleProductClick(product)}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="zoom-btn"
+                    onClick={() => handleImageClick(product, 0)}
+                  >
+                    🔍
+                  </button>
+                </div>
+                <div onClick={() => handleProductClick(product)}>
+                  {product.images && product.images.length > 0 ? (
+                    <img
+                      src={getImageUrl(product.images[0])}
+                      alt={product.title}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="placeholder-image">No Image</div>
+                  )}
+                </div>
               </div>
 
               <div className="product-info">
