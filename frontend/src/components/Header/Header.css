@@ -253,7 +253,7 @@ header.sticky {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(11,18,32,0.18);
+  box-shadow: 0 6px 16px rgba(11, 18, 32, 0.18);
 }
 
 /* Search */
