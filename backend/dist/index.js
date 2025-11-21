@@ -562,8 +562,10 @@ app.get("/product/:id", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch product" });
     }
 });
-// Mount reviews before dynamic section routes so /reviews/* is not swallowed
+// Mount reviews, cart, and orders before dynamic section routes so they're not swallowed
 app.use("/reviews", reviewRoutes);
+app.use("/cart", cartRoutes);
+app.use("/orders", orderRoutes);
 // GET /:sectionName - Get section details with subsections and products
 app.get("/:sectionName", async (req, res, next) => {
     try {
@@ -1511,8 +1513,5 @@ app.get("/auth/google/callback", async (req, res) => {
         return res.status(500).send("Internal server error during Google OAuth");
     }
 });
-// Mount cart and order routes AFTER all dynamic section routes
-// so they take priority and are not swallowed by /:sectionName handlers
-app.use("/cart", cartRoutes);
-app.use("/orders", orderRoutes);
+// Cart and order routes are now mounted BEFORE wildcard section routes (see above)
 //# sourceMappingURL=index.js.map

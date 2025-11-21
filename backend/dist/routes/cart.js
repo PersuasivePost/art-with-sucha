@@ -98,6 +98,11 @@ router.get("/", authenticateUser, async (req, res) => {
                 createdAt: "desc",
             },
         });
+        console.log(`GET /cart for userId=${userId} returned ${cartItems.length} items:`, cartItems.map((c) => ({
+            id: c.id,
+            productId: c.productId,
+            quantity: c.quantity,
+        })));
         // Generate signed URLs for all product images
         const cartItemsWithSignedUrls = await Promise.all(cartItems.map(async (item) => {
             const signedImageUrls = await getMultipleImageUrls(item.product.images || []);
@@ -141,12 +146,32 @@ router.put("/update/:cartItemId", authenticateUser, async (req, res) => {
                 .json({ error: "Valid quantity is required (minimum 1)" });
         }
         // Verify cart item belongs to user
+        console.log(`Updating cart item: userId=${userId}, cartItemId=${cartItemId}, quantity=${quantity}`);
         const cartItem = await prisma.cartItem.findFirst({
             where: {
                 id: parseInt(cartItemId),
                 userId,
             },
         });
+        console.log("Lookup result for update:", cartItem);
+        if (!cartItem) {
+            // Extra diagnostics: try findUnique by id without user filter and log types
+            try {
+                const idNum = parseInt(cartItemId);
+                console.log("Types: userId(type)=" +
+                    typeof userId +
+                    ", idNum(type)=" +
+                    typeof idNum);
+                const byIdOnly = await prisma.cartItem.findUnique({
+                    where: { id: idNum },
+                });
+                console.log("findUnique by id (no user filter):", byIdOnly);
+            }
+            catch (diagErr) {
+                console.error("Diagnostic lookup failed:", diagErr);
+            }
+        }
+        console.log("Lookup result for update:", cartItem);
         if (!cartItem) {
             return res.status(404).json({ error: "Cart item not found" });
         }
@@ -188,12 +213,31 @@ router.delete("/remove/:cartItemId", authenticateUser, async (req, res) => {
             return res.status(400).json({ error: "Cart item ID is required" });
         }
         // Verify cart item belongs to user
+        console.log(`Removing cart item: userId=${userId}, cartItemId=${cartItemId}`);
         const cartItem = await prisma.cartItem.findFirst({
             where: {
                 id: parseInt(cartItemId),
                 userId,
             },
         });
+        console.log("Lookup result for remove:", cartItem);
+        if (!cartItem) {
+            try {
+                const idNum = parseInt(cartItemId);
+                console.log("Types (remove): userId(type)=" +
+                    typeof userId +
+                    ", idNum(type)=" +
+                    typeof idNum);
+                const byIdOnly = await prisma.cartItem.findUnique({
+                    where: { id: idNum },
+                });
+                console.log("findUnique by id (remove, no user filter):", byIdOnly);
+            }
+            catch (diagErr) {
+                console.error("Diagnostic lookup failed (remove):", diagErr);
+            }
+        }
+        console.log("Lookup result for remove:", cartItem);
         if (!cartItem) {
             return res.status(404).json({ error: "Cart item not found" });
         }
@@ -204,6 +248,74 @@ router.delete("/remove/:cartItemId", authenticateUser, async (req, res) => {
     }
     catch (error) {
         console.error("Error removing cart item:", error);
+        res.status(500).json({ error: "Failed to remove item from cart" });
+    }
+});
+// PUT /cart/update-by-product/:productId - Update cart item by productId (finds cartItem for user)
+router.put("/update-by-product/:productId", authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const { productId } = req.params;
+        const { quantity } = req.body;
+        if (!userId)
+            return res.status(401).json({ error: "User not authenticated" });
+        if (!productId)
+            return res.status(400).json({ error: "Product ID is required" });
+        if (!quantity || quantity < 1)
+            return res
+                .status(400)
+                .json({ error: "Valid quantity is required (minimum 1)" });
+        const prodIdNum = parseInt(productId);
+        // Find existing cart item for this user+product
+        const cartItem = await prisma.cartItem.findFirst({
+            where: { userId, productId: prodIdNum },
+        });
+        console.log(`Lookup result for update-by-product userId=${userId} productId=${prodIdNum}:`, cartItem);
+        if (!cartItem)
+            return res
+                .status(404)
+                .json({ error: "Cart item not found for this product" });
+        const updatedCartItem = await prisma.cartItem.update({
+            where: { id: cartItem.id },
+            data: { quantity: parseInt(quantity) },
+            include: { product: true },
+        });
+        const signedImageUrls = await getMultipleImageUrls(updatedCartItem.product.images || []);
+        res.json({
+            message: "Cart item updated successfully",
+            cartItem: {
+                ...updatedCartItem,
+                product: { ...updatedCartItem.product, images: signedImageUrls },
+            },
+        });
+    }
+    catch (error) {
+        console.error("Error updating cart item by product:", error);
+        res.status(500).json({ error: "Failed to update cart item" });
+    }
+});
+// DELETE /cart/remove-by-product/:productId - Remove item by productId for current user
+router.delete("/remove-by-product/:productId", authenticateUser, async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        const { productId } = req.params;
+        if (!userId)
+            return res.status(401).json({ error: "User not authenticated" });
+        if (!productId)
+            return res.status(400).json({ error: "Product ID is required" });
+        const prodIdNum = parseInt(productId);
+        const cartItem = await prisma.cartItem.findFirst({
+            where: { userId, productId: prodIdNum },
+        });
+        if (!cartItem)
+            return res
+                .status(404)
+                .json({ error: "Cart item not found for this product" });
+        await prisma.cartItem.delete({ where: { id: cartItem.id } });
+        res.json({ message: "Item removed from cart successfully" });
+    }
+    catch (error) {
+        console.error("Error removing cart item by product:", error);
         res.status(500).json({ error: "Failed to remove item from cart" });
     }
 });
