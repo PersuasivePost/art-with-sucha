@@ -6,6 +6,7 @@ import About from "../pages/AboutUs/About";
 import Contact from "../pages/ContactUs/Contact";
 import SectionView from "../pages/Gallery/Section/SectionView";
 import ProductView from "../pages/Gallery/Product/ProductView";
+import ProductDetail from "../pages/Gallery/Product/ProductDetail";
 import Profile from "../pages/Profile/Profile";
 import Cart from "../pages/Cart/Cart";
 import Orders from "../pages/Orders/Orders";
@@ -56,6 +57,7 @@ const AppRouter = () => {
       />
       <Route path="/:sectionName" element={<SectionView />} />
       <Route path="/:sectionName/:subsectionName" element={<ProductView />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
       {/* Catch-all route for unknown paths - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

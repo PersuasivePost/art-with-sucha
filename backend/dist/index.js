@@ -526,6 +526,41 @@ app.get(/^\/api\/github-image\/(.+)$/, async (req, res) => {
         return res.status(500).json({ error: "Failed to fetch image" });
     }
 });
+// GET /product/:id - fetch single product by id (or title slug)
+app.get("/product/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id)
+            return res.status(400).json({ error: "Product id required" });
+        // Try numeric id first
+        const numericId = parseInt(id);
+        let product;
+        if (!isNaN(numericId)) {
+            product = await prisma.product.findUnique({
+                where: { id: numericId },
+                include: { section: { include: { parent: true } } },
+            });
+        }
+        else {
+            // fallback: search by title or slug
+            const title = id.replace(/-/g, " ");
+            product = await prisma.product.findFirst({
+                where: { OR: [{ title: id }, { title }] },
+                include: { section: { include: { parent: true } } },
+            });
+        }
+        if (!product)
+            return res.status(404).json({ error: "Product not found" });
+        // Generate signed URLs for product images
+        const signedImageUrls = await getMultipleImageUrls(product.images || []);
+        const productWithUrls = { ...product, images: signedImageUrls };
+        res.json({ product: productWithUrls });
+    }
+    catch (err) {
+        console.error("Error fetching product by id:", err);
+        res.status(500).json({ error: "Failed to fetch product" });
+    }
+});
 // GET /:sectionName - Get section details with subsections and products
 app.get("/:sectionName", async (req, res, next) => {
     try {

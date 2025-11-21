@@ -1,0 +1,72 @@
+.pdp-page {
+  font-family: inherit;
+  color: inherit;
+}
+.pdp-main {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.pdp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+.pdp-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.pdp-title {
+  font-size: 1.8rem;
+  margin: 0 0 0.5rem;
+}
+.pdp-price {
+  font-size: 1.4rem;
+  color: #222;
+  margin-bottom: 1rem;
+}
+.pdp-desc {
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.pdp-tags {
+  margin-bottom: 1rem;
+}
+.pdp-tag {
+  display: inline-block;
+  background: #f3f3f3;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-right: 0.4rem;
+  font-size: 0.85rem;
+}
+.pdp-addcart {
+  background: #111827;
+  color: #fff;
+  border: none;
+  padding: 0.8rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.pdp-placeholder {
+  background: #eee;
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  border-radius: 8px;
+}
+@media (max-width: 800px) {
+  .pdp-grid {
+    grid-template-columns: 1fr;
+  }
+  .pdp-image img,
+  .pdp-placeholder {
+    height: auto;
+  }
+}
