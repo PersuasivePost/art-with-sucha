@@ -1,9 +1,8 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticateUser } from "../middleware/auth.js";
 import { getMultipleImageUrls } from "../utils/storageAdapter.js";
 const router = express.Router();
-const prisma = new PrismaClient();
 // POST /orders/checkout - Checkout and create order from cart
 router.post("/checkout", authenticateUser, async (req, res) => {
     try {

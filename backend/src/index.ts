@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import { PrismaClient } from "@prisma/client";
+import prisma from "./prisma.js";
 import multer from "multer";
 import {
   S3Client,
@@ -44,7 +44,6 @@ console.log(`🎨 Ready to serve!\n`);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const prisma = new PrismaClient();
 
 // Initialize S3 client for Backblaze B2
 const s3Client = new S3Client({
@@ -157,10 +156,6 @@ app.use(
   })
 );
 app.use(express.json());
-
-// Mount cart and order routes
-app.use("/cart", cartRoutes);
-app.use("/orders", orderRoutes);
 
 // Lightweight health endpoint to quickly verify the server is alive
 app.get("/health", (req, res) => {
@@ -651,8 +646,23 @@ app.get(/^\/api\/github-image\/(.+)$/, async (req, res) => {
 });
 
 // GET /:sectionName - Get section details with subsections and products
-app.get("/:sectionName", async (req, res) => {
+app.get("/:sectionName", async (req, res, next) => {
   try {
+    // Guard: minimal reserved prefixes so dynamic section routes don't swallow
+    // explicitly mounted endpoints. Keep this list small and only for routes
+    // that must remain separate from dynamic section names.
+    const reservedPrefixes = new Set([
+      "api",
+      "cart",
+      "orders",
+      "auth",
+      "signup",
+      "login",
+      "adminlogin",
+      "health",
+    ]);
+    const firstSeg = (req.path || "").split("/")[1] || "";
+    if (reservedPrefixes.has(firstSeg)) return next();
     const { sectionName } = req.params;
 
     // Find the main section by name or slug
@@ -684,8 +694,9 @@ app.get("/:sectionName", async (req, res) => {
     });
 
     if (!mainSection) {
-      res.status(404).json({ error: "Section not found" });
-      return;
+      // If the requested section doesn't exist, allow other rout es
+      // (or a mounted handler) to handle it instead of returning 404 here.
+      return next();
     }
 
     // Generate signed URLs for subsection cover images and product images
@@ -735,8 +746,20 @@ app.get("/:sectionName", async (req, res) => {
 });
 
 // GET /:sectionName/:subsectionName - Get all products under a subsection
-app.get("/:sectionName/:subsectionName", async (req, res) => {
+app.get("/:sectionName/:subsectionName", async (req, res, next) => {
   try {
+    const reservedPrefixes = new Set([
+      "api",
+      "cart",
+      "orders",
+      "auth",
+      "signup",
+      "login",
+      "adminlogin",
+      "health",
+    ]);
+    const firstSeg = (req.path || "").split("/")[1] || "";
+    if (reservedPrefixes.has(firstSeg)) return next();
     const { sectionName, subsectionName } = req.params;
 
     // Convert URL parameters back to names
@@ -768,8 +791,8 @@ app.get("/:sectionName/:subsectionName", async (req, res) => {
     });
 
     if (!subsection) {
-      res.status(404).json({ error: "Subsection not found" });
-      return;
+      // Let other middleware/handlers respond if subsection isn't found
+      return next();
     }
 
     // Generate signed URLs for product images
@@ -1711,7 +1734,7 @@ app.get("/auth/google/callback", async (req, res) => {
             orderSummary: [],
           } as any,
         })
-        .catch((e) => {
+        .catch((e: any) => {
           console.error("Failed to create user:", e);
           return null;
         });
@@ -1738,3 +1761,8 @@ app.get("/auth/google/callback", async (req, res) => {
     return res.status(500).send("Internal server error during Google OAuth");
   }
 });
+
+// Mount cart and order routes AFTER all dynamic section routes
+// so they take priority and are not swallowed by /:sectionName handlers
+app.use("/cart", cartRoutes);
+app.use("/orders", orderRoutes);

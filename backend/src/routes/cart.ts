@@ -1,10 +1,9 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticateUser, AuthRequest } from "../middleware/auth.js";
 import { getMultipleImageUrls } from "../utils/storageAdapter.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // POST /cart/add - Add item to cart or update quantity if exists
 router.post("/add", authenticateUser, async (req: AuthRequest, res) => {
@@ -115,7 +114,7 @@ router.get("/", authenticateUser, async (req: AuthRequest, res) => {
 
     // Generate signed URLs for all product images
     const cartItemsWithSignedUrls = await Promise.all(
-      cartItems.map(async (item) => {
+      cartItems.map(async (item: any) => {
         const signedImageUrls = await getMultipleImageUrls(
           item.product.images || []
         );
@@ -131,11 +130,11 @@ router.get("/", authenticateUser, async (req: AuthRequest, res) => {
 
     // Calculate totals
     const totalItems = cartItemsWithSignedUrls.reduce(
-      (sum, item) => sum + item.quantity,
+      (sum: number, item: any) => sum + item.quantity,
       0
     );
     const totalAmount = cartItemsWithSignedUrls.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
+      (sum: number, item: any) => sum + item.product.price * item.quantity,
       0
     );
 

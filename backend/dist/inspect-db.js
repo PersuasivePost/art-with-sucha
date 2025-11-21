@@ -4,10 +4,9 @@
  *
  * Usage: npm run inspect-db
  */
-import { PrismaClient } from "@prisma/client";
 import dotenv from "dotenv";
+import prisma from "./prisma.js";
 dotenv.config();
-const prisma = new PrismaClient();
 async function inspectDatabase() {
     console.log("═══════════════════════════════════════════════════════");
     console.log("         DATABASE IMAGE INSPECTION");

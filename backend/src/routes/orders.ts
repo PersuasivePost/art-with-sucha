@@ -1,10 +1,9 @@
 import express from "express";
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma.js";
 import { authenticateUser, AuthRequest } from "../middleware/auth.js";
 import { getMultipleImageUrls } from "../utils/storageAdapter.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // POST /orders/checkout - Checkout and create order from cart
 router.post("/checkout", authenticateUser, async (req: AuthRequest, res) => {
@@ -29,12 +28,12 @@ router.post("/checkout", authenticateUser, async (req: AuthRequest, res) => {
 
     // Calculate total amount
     const totalAmount = cartItems.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
+      (sum: number, item: any) => sum + item.product.price * item.quantity,
       0
     );
 
     // Create order with order items in a transaction
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: any) => {
       // Create order
       const newOrder = await tx.order.create({
         data: {
@@ -46,7 +45,7 @@ router.post("/checkout", authenticateUser, async (req: AuthRequest, res) => {
 
       // Create order items
       await tx.orderItem.createMany({
-        data: cartItems.map((item) => ({
+        data: cartItems.map((item: any) => ({
           orderId: newOrder.id,
           productId: item.productId,
           quantity: item.quantity,
@@ -117,9 +116,9 @@ router.get("/", authenticateUser, async (req: AuthRequest, res) => {
 
     // Generate signed URLs for product images
     const ordersWithSignedUrls = await Promise.all(
-      orders.map(async (order) => {
+      orders.map(async (order: any) => {
         const orderItemsWithSignedUrls = await Promise.all(
-          order.orderItems.map(async (item) => {
+          order.orderItems.map(async (item: any) => {
             const signedImageUrls = await getMultipleImageUrls(
               item.product.images || []
             );
@@ -184,7 +183,7 @@ router.get("/:orderId", authenticateUser, async (req: AuthRequest, res) => {
 
     // Generate signed URLs for product images
     const orderItemsWithSignedUrls = await Promise.all(
-      order.orderItems.map(async (item) => {
+      order.orderItems.map(async (item: any) => {
         const signedImageUrls = await getMultipleImageUrls(
           item.product.images || []
         );
