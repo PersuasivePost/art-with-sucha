@@ -10,6 +10,7 @@ type WishlistItem = {
     id: number;
     title: string;
     artist?: string;
+    description?: string;
     price?: number;
     images?: string[];
   } | null;
@@ -207,7 +208,9 @@ export default function Wishlist() {
                       </Link>
                     </h3>
                     <div className="wish-artist">
-                      {it.product?.artist || "Unknown"}
+                      {it.product?.description ||
+                        it.product?.artist ||
+                        "Unknown"}
                     </div>
                   </div>
                   <div className="wish-actions">
