@@ -26,7 +26,7 @@ export default function DashboardLayout({
           <nav className="sidebar-nav">
             <Link
               to="/profile"
-              className={`side-link ${active === "profile" ? "active" : ""}`}   
+              className={`side-link ${active === "profile" ? "active" : ""}`}
             >
               Profile
             </Link>
@@ -42,12 +42,12 @@ export default function DashboardLayout({
             >
               My Orders
             </Link>
-            <Link
+            {/* <Link
               to="/profile/settings"
               className={`side-link ${active === "settings" ? "active" : ""}`}
             >
               Settings
-            </Link>
+            </Link> */}
           </nav>
 
           <div className="sidebar-footer">
