@@ -984,6 +984,51 @@
   color: rgba(255, 255, 255, 1);
 }
 
+/* Heart button */
+.product-wishlist {
+  margin-top: 8px;
+}
+.heart-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #333;
+  transition: transform 0.12s ease, color 0.12s ease;
+}
+.heart-btn.in-wishlist {
+  color: #e0245e; /* pink/red */
+  transform: scale(1.04);
+}
+
+/* Make the heart in overlay slightly larger and more prominent */
+.image-overlay .heart-btn {
+  font-size: 22px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.08);
+}
+.image-overlay .heart-btn.in-wishlist {
+  color: #e0245e;
+  transform: scale(1.06);
+}
+
+/* Bottom toast used by wishlist actions */
+.bottom-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 24px;
+  background: rgba(2, 6, 23, 0.96);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.24);
+  z-index: 1200;
+  font-weight: 700;
+}
+
 .tags-input-field {
   border: none;
   outline: none;

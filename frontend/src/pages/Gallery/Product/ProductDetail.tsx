@@ -19,6 +19,8 @@ export default function ProductDetail() {
   const mainImgRef = useRef<HTMLImageElement | null>(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
+  // lightweight wishlist heart state (visual + backend call) — minimal, no layout changes
+  const [inWishlist, setInWishlist] = useState(false);
   // Reviews state
   const [reviews, setReviews] = useState<any[]>([]);
   const [canReview, setCanReview] = useState(false);
@@ -509,6 +511,64 @@ export default function ProductDetail() {
                     }}
                   >
                     🔍
+                  </button>
+                  {/* Minimal heart in overlay — toggles and calls backend but preserves PDP layout */}
+                  <button
+                    className={`overlay-heart ${
+                      inWishlist ? "in-wishlist" : ""
+                    }`}
+                    aria-label={
+                      inWishlist ? "Remove from wishlist" : "Add to wishlist"
+                    }
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const token = localStorage.getItem("userToken");
+                      if (!token) {
+                        navigate("/login");
+                        return;
+                      }
+                      const currently = inWishlist;
+                      setInWishlist(!currently);
+                      try {
+                        const envBackend = (
+                          import.meta.env.VITE_BACKEND_URL || ""
+                        ).replace(/\/+$/g, "");
+                        const isLocalFront =
+                          typeof window !== "undefined" &&
+                          (window.location.hostname === "localhost" ||
+                            window.location.hostname === "127.0.0.1");
+                        const backendBase = isLocalFront
+                          ? import.meta.env.VITE_LOCAL_BACKEND ||
+                            "http://localhost:5000"
+                          : envBackend || "https://art-with-sucha.onrender.com";
+                        const backend = backendBase.replace(/\/+$/g, "");
+                        if (!currently) {
+                          await fetch(`${backend}/wishlist/add`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ productId: product.id }),
+                          });
+                        } else {
+                          await fetch(
+                            `${backend}/wishlist/remove-by-product/${encodeURIComponent(
+                              String(product.id)
+                            )}`,
+                            {
+                              method: "DELETE",
+                              headers: { Authorization: `Bearer ${token}` },
+                            }
+                          );
+                        }
+                      } catch (err) {
+                        // rollback on error
+                        setInWishlist(currently);
+                      }
+                    }}
+                  >
+                    {inWishlist ? "♥" : "♡"}
                   </button>
                 </div>
                 <img

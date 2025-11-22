@@ -11,6 +11,11 @@ const Profile = () => {
     phone: "",
     address: "",
   });
+  const [summary, setSummary] = useState<{
+    orders: number;
+    wishlist: number;
+    memberSince?: string;
+  }>({ orders: 0, wishlist: 0 });
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -37,9 +42,16 @@ const Profile = () => {
       setProfile({
         name: data.name || "",
         email: data.email || "",
-        phone: data.phone || "",
+        phone: data.mobno || data.phone || "",
         address: data.address || "",
       });
+      // member since
+      if (data.createdAt) {
+        setSummary((s) => ({
+          ...s,
+          memberSince: new Date(data.createdAt).getFullYear().toString(),
+        }));
+      }
     } catch (e) {
       const stored = localStorage.getItem("profile");
       if (stored) setProfile(JSON.parse(stored));
@@ -48,8 +60,78 @@ const Profile = () => {
     }
   };
 
+  const fetchSummary = async () => {
+    try {
+      const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
+        /\/+$/g,
+        ""
+      );
+      const isLocalFront =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      const backendBase = isLocalFront
+        ? import.meta.env.VITE_LOCAL_BACKEND || "http://localhost:5000"
+        : envBackend || "https://art-with-sucha.onrender.com";
+      const backendUrl = backendBase.replace(/\/+$/g, "");
+
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+
+      // Try fast count endpoints
+      let orders = 0;
+      let wishlist = 0;
+
+      try {
+        const oRes = await fetch(`${backendUrl}/orders/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (oRes.ok) {
+          const od = await oRes.json();
+          orders = typeof od.count === "number" ? od.count : orders;
+        } else {
+          // fallback to fetching user's orders list
+          const oList = await fetch(`${backendUrl}/orders?mine=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (oList.ok) {
+            const od = await oList.json();
+            orders = (od.orders || []).length;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      try {
+        const wRes = await fetch(`${backendUrl}/wishlist/count`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (wRes.ok) {
+          const wd = await wRes.json();
+          wishlist = typeof wd.count === "number" ? wd.count : wishlist;
+        } else {
+          const wList = await fetch(`${backendUrl}/wishlist?mine=true`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (wList.ok) {
+            const wd = await wList.json();
+            wishlist = (wd.items || []).length || (wd.wishlist || []).length;
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      setSummary((s) => ({ ...s, orders, wishlist }));
+    } catch (err) {
+      // noop
+    }
+  };
+
   useEffect(() => {
     fetchProfile();
+    fetchSummary();
   }, []);
 
   const saveProfile = async () => {
@@ -74,13 +156,16 @@ const Profile = () => {
         },
         body: JSON.stringify({
           name: profile.name,
-          phone: profile.phone,
+          mobno: profile.phone,
           address: profile.address,
         }),
       });
       if (!res.ok) throw new Error("Failed");
       setEditing(false);
       localStorage.setItem("profile", JSON.stringify(profile));
+      // refresh summary in case profile change affects anything
+      fetchProfile();
+      fetchSummary();
     } catch (e) {
       console.error(e);
     }
@@ -100,8 +185,8 @@ const Profile = () => {
             </div>
 
             <div className="hero-meta">
-              <h1 className="hero-name">{profile.name || "Your Name"}</h1>
-              <p className="hero-email">{profile.email || "you@example.com"}</p>
+              <h1 className="hero-name">{profile.name}</h1>
+              <p className="hero-email">{profile.email}</p>
               <div className="hero-actions">
                 {!editing ? (
                   <button
@@ -177,22 +262,19 @@ const Profile = () => {
               <h3>Account Summary</h3>
               <div className="side-row">
                 <div>
-                  <div className="side-num">3</div>
+                  <div className="side-num">{summary.orders}</div>
                   <div className="side-label">Orders</div>
                 </div>
                 <div>
-                  <div className="side-num">10</div>
+                  <div className="side-num">{summary.wishlist}</div>
                   <div className="side-label">Wishlist</div>
                 </div>
               </div>
               <hr />
               <p>
-                Member since <strong>2024</strong>
+                Member since <strong>{summary.memberSince || "—"}</strong>
               </p>
-              <div className="side-actions">
-                <button className="btn-outline">Manage Addresses</button>
-                <button className="btn-outline">Payment Methods</button>
-              </div>
+              <div className="side-actions"></div>
             </div>
           </aside>
         </div>

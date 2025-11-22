@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Header from "../../../components/Header/Header";
 import Footer from "../../../components/Footer/Footer";
@@ -53,6 +53,15 @@ export default function ProductsView() {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState("");
 
+  // Wishlist UI state and toast
+  const [wishlistIds, setWishlistIds] = useState<number[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2000);
+  };
+
   // Add Product Form State
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [submittingAdd, setSubmittingAdd] = useState(false);
@@ -89,8 +98,40 @@ export default function ProductsView() {
 
     if (sectionName && subsectionName) {
       fetchProducts();
+      // also attempt to fetch user's wishlist ids (non-blocking)
+      fetchWishlistIds();
     }
   }, [sectionName, subsectionName]);
+
+  const fetchWishlistIds = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("userToken");
+      if (!token) return;
+      const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
+        /\/+$/g,
+        ""
+      );
+      const isLocalFront =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      const backendBase = isLocalFront
+        ? import.meta.env.VITE_LOCAL_BACKEND || "http://localhost:5000"
+        : envBackend || "https://art-with-sucha.onrender.com";
+      const backend = backendBase.replace(/\/+$/g, "");
+      const res = await fetch(`${backend}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ids = (data.items || [])
+        .map((it: any) => it.productId || it.product?.id)
+        .filter(Boolean) as number[];
+      setWishlistIds(ids);
+    } catch (err) {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (subsection) {
@@ -512,6 +553,80 @@ export default function ProductsView() {
                     onClick={() => handleImageClick(product, 0)}
                   >
                     🔍
+                  </button>
+                  {/* Heart moved into overlay so it appears with other image actions on hover */}
+                  <button
+                    aria-label={
+                      wishlistIds.includes(product.id)
+                        ? "Remove from wishlist"
+                        : "Add to wishlist"
+                    }
+                    className={`heart-btn ${
+                      wishlistIds.includes(product.id) ? "in-wishlist" : ""
+                    }`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const token = localStorage.getItem("userToken");
+                      if (!token) {
+                        navigate("/login");
+                        return;
+                      }
+                      const currently = wishlistIds.includes(product.id);
+                      // optimistic toggle
+                      setWishlistIds((prev) =>
+                        currently
+                          ? prev.filter((id) => id !== product.id)
+                          : [...prev, product.id]
+                      );
+                      try {
+                        const envBackend = (
+                          import.meta.env.VITE_BACKEND_URL || ""
+                        ).replace(/\/+$/g, "");
+                        const isLocalFront =
+                          typeof window !== "undefined" &&
+                          (window.location.hostname === "localhost" ||
+                            window.location.hostname === "127.0.0.1");
+                        const backendBase = isLocalFront
+                          ? import.meta.env.VITE_LOCAL_BACKEND ||
+                            "http://localhost:5000"
+                          : envBackend || "https://art-with-sucha.onrender.com";
+                        const backend = backendBase.replace(/\/+$/g, "");
+                        if (!currently) {
+                          await fetch(`${backend}/wishlist/add`, {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({ productId: product.id }),
+                          });
+                          showToast("Added to wishlist");
+                        } else {
+                          await fetch(
+                            `${backend}/wishlist/remove-by-product/${encodeURIComponent(
+                              String(product.id)
+                            )}`,
+                            {
+                              method: "DELETE",
+                              headers: { Authorization: `Bearer ${token}` },
+                            }
+                          );
+                          showToast("Removed from wishlist");
+                        }
+                      } catch (err) {
+                        // rollback optimistic
+                        setWishlistIds((prev) =>
+                          currently
+                            ? [...prev, product.id]
+                            : prev.filter((id) => id !== product.id)
+                        );
+                        showToast(
+                          currently ? "Failed to remove" : "Failed to add"
+                        );
+                      }
+                    }}
+                  >
+                    {wishlistIds.includes(product.id) ? "♥" : "♡"}
                   </button>
                 </div>
                 <div onClick={() => handleProductClick(product)}>
@@ -941,6 +1056,11 @@ export default function ProductsView() {
       />
 
       <Footer />
+      {toastMessage && (
+        <div className="bottom-toast" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

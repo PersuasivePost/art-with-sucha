@@ -14,6 +14,8 @@ import { uploadFile, uploadMultipleFiles, getImageUrl, getMultipleImageUrls, get
 import cartRoutes from "./routes/cart.js";
 import orderRoutes from "./routes/orders.js";
 import reviewRoutes from "./routes/reviews.js";
+import userRoutes from "./routes/users.js";
+import wishlistRoutes from "./routes/wishlist.js";
 // Load environment variables
 dotenv.config();
 // Log the storage mode at startup
@@ -566,6 +568,8 @@ app.get("/product/:id", async (req, res) => {
 app.use("/reviews", reviewRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
+app.use("/users", userRoutes);
+app.use("/wishlist", wishlistRoutes);
 // GET /:sectionName - Get section details with subsections and products
 app.get("/:sectionName", async (req, res, next) => {
     try {

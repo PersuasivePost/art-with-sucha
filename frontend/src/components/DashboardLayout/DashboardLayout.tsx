@@ -26,7 +26,7 @@ export default function DashboardLayout({
           <nav className="sidebar-nav">
             <Link
               to="/profile"
-              className={`side-link ${active === "profile" ? "active" : ""}`}
+              className={`side-link ${active === "profile" ? "active" : ""}`}   
             >
               Profile
             </Link>

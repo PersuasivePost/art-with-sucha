@@ -145,6 +145,20 @@ router.get("/", authenticateUser, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /orders/count - return the number of orders for current user
+router.get("/count", authenticateUser, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId)
+      return res.status(401).json({ error: "User not authenticated" });
+    const count = await prisma.order.count({ where: { userId } });
+    res.json({ count });
+  } catch (err) {
+    console.error("Error fetching orders count:", err);
+    res.status(500).json({ error: "Failed to fetch orders count" });
+  }
+});
+
 // GET /orders/:orderId - Get specific order details
 router.get("/:orderId", authenticateUser, async (req: AuthRequest, res) => {
   try {

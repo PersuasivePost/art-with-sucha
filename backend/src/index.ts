@@ -24,6 +24,8 @@ import {
 import cartRoutes from "./routes/cart.js";
 import orderRoutes from "./routes/orders.js";
 import reviewRoutes from "./routes/reviews.js";
+import userRoutes from "./routes/users.js";
+import wishlistRoutes from "./routes/wishlist.js";
 
 // Extend Express Request type to include artist and user properties
 declare global {
@@ -686,6 +688,8 @@ app.get("/product/:id", async (req, res) => {
 app.use("/reviews", reviewRoutes);
 app.use("/cart", cartRoutes);
 app.use("/orders", orderRoutes);
+app.use("/users", userRoutes);
+app.use("/wishlist", wishlistRoutes);
 
 // GET /:sectionName - Get section details with subsections and products
 app.get("/:sectionName", async (req, res, next) => {
