@@ -1,0 +1,190 @@
+.profile-page.royal {
+  font-family: "Playfair Display", Georgia, serif;
+  color: #0b1220;
+}
+
+.profile-hero {
+  background: linear-gradient(
+    90deg,
+    rgba(184, 138, 28, 0.12),
+    rgba(241, 215, 138, 0.06)
+  );
+  border-radius: 14px;
+  padding: 34px 28px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-deco {
+  position: absolute;
+  right: -120px;
+  top: -60px;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(
+      circle at 30% 30%,
+      rgba(184, 138, 28, 0.08),
+      transparent 30%
+    ),
+    radial-gradient(circle at 70% 70%, rgba(11, 18, 32, 0.03), transparent 30%);
+  transform: rotate(8deg);
+  filter: blur(10px);
+}
+.hero-inner {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  position: relative;
+}
+.avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff, #f6f2ed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #0b1220;
+  box-shadow: 0 30px 60px rgba(2, 6, 23, 0.08);
+  border: 6px solid rgba(241, 215, 138, 0.6);
+}
+.avatar-badge {
+  background: linear-gradient(90deg, #b88a1c, #f1d78a);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  color: #fff;
+}
+.hero-meta .hero-name {
+  margin: 0 0 6px 0;
+  font-size: 2.2rem;
+}
+.hero-meta .hero-email {
+  margin: 0 0 14px 0;
+  color: rgba(11, 18, 32, 0.7);
+}
+.hero-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.profile-grid.expanded {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+}
+
+.profile-card.grand {
+  background: linear-gradient(180deg, #fff, #fbf6f1);
+  border-radius: 12px;
+  padding: 26px;
+  box-shadow: 0 40px 90px rgba(2, 6, 23, 0.06);
+}
+
+.form-grid {
+  display: flex;
+  gap: 20px;
+}
+.form-col {
+  flex: 1;
+}
+.form-col label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 700;
+}
+.form-col input,
+.form-col textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  margin-top: 8px;
+  background: transparent;
+}
+.muted {
+  color: rgba(11, 18, 32, 0.5);
+}
+
+.profile-side.grand-side {
+}
+.side-card {
+  background: linear-gradient(180deg, #fff, #fbf6f1);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.05);
+}
+.side-row {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.side-num {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+.side-label {
+  color: rgba(11, 18, 32, 0.6);
+}
+.side-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-primary.large {
+  padding: 12px 20px;
+  font-weight: 900;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #0b1220, #2a2730);
+  color: #fff;
+  border: none;
+}
+.btn-primary {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #0b1220, #2a2730);
+  color: #fff;
+  border: none;
+  font-weight: 800;
+}
+.btn-plain.large {
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+}
+.btn-plain {
+  background: transparent;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(11, 18, 32, 0.08);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .hero-inner {
+    flex-direction: row;
+    gap: 12px;
+  }
+  .profile-grid.expanded {
+    grid-template-columns: 1fr;
+  }
+  .avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 36px;
+  }
+}

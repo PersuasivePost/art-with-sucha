@@ -1,9 +1,13 @@
+import DashboardLayout from "../../components/DashboardLayout/DashboardLayout";
+
 const Wishlist = () => {
   return (
-    <div className="container" style={{ padding: "2rem" }}>
-      <h1>Wishlist</h1>
-      <p>Wishlist page content coming soon.</p>
-    </div>
+    <DashboardLayout active="wishlist">
+      <div style={{ padding: "20px" }}>
+        <h1>Wishlist</h1>
+        <p>Wishlist page content coming soon.</p>
+      </div>
+    </DashboardLayout>
   );
 };
 
