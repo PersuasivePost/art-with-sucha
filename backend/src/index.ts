@@ -28,6 +28,7 @@ import reviewRoutes from "./routes/reviews.js";
 import userRoutes from "./routes/users.js";
 import wishlistRoutes from "./routes/wishlist.js";
 import paymentRoutes from "./routes/payment.js";
+import { sendAllNotifications } from "./utils/notifications.js";
 
 // Extend Express Request type to include artist and user properties
 declare global {
@@ -1743,6 +1744,22 @@ async function reconcilePendingPayments() {
           console.log(
             `Order ${o.id} marked as captured (payment ${capturedPayment.id})`
           );
+          // send notifications for reconciled payment
+          try {
+            const fullOrder = await prisma.order.findUnique({
+              where: { id: o.id },
+              include: {
+                user: true,
+                orderItems: { include: { product: true } },
+              },
+            });
+            if (fullOrder) await sendAllNotifications(fullOrder);
+          } catch (err) {
+            console.error(
+              "Failed to send notifications for reconciled order:",
+              err
+            );
+          }
         } else {
           // No captured payment found - mark as failed/cancelled
           await prisma.order.update({

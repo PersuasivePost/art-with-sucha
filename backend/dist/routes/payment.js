@@ -2,6 +2,7 @@ import express from "express";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import prisma from "../prisma.js";
+import { sendAllNotifications } from "../utils/notifications.js";
 import { authenticateUser } from "../middleware/auth.js";
 const router = express.Router();
 // Initialize Razorpay instance
@@ -163,6 +164,20 @@ router.post("/verify", authenticateUser, async (req, res) => {
                 where: { userId },
             });
         });
+        // Fetch full order with items and user to send notifications
+        try {
+            const fullOrder = await prisma.order.findUnique({
+                where: { id: order.id },
+                include: { user: true, orderItems: { include: { product: true } } },
+            });
+            if (fullOrder) {
+                // Fire notifications (await to ensure delivery; replace with queue in future)
+                await sendAllNotifications(fullOrder).catch((e) => console.error("sendAllNotifications error:", e));
+            }
+        }
+        catch (err) {
+            console.error("Failed to send notifications:", err);
+        }
         res.json({
             success: true,
             message: "Payment verified successfully",
