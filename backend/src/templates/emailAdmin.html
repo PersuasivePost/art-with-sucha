@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <body style="font-family: monospace">
+    <h2>🛒 NEW ORDER RECEIVED</h2>
+
+    <h3>Order Info:</h3>
+    <ul>
+      <li>Order ID: #${orderId}</li>
+      <li>Amount: ₹${total}</li>
+      <li>Payment: ✅ CONFIRMED</li>
+      <li>Date: ${date}</li>
+    </ul>
+
+    <h3>Customer:</h3>
+    <ul>
+      <li>Name: ${customerName}</li>
+      <li>Email: ${customerEmail}</li>
+      <li>Phone: ${customerPhone}</li>
+    </ul>
+
+    <h3>Items to Pack:</h3>
+    <ol>
+      ${items}
+    </ol>
+
+    <h3>Ship To:</h3>
+    <pre>${shippingAddress}</pre>
+
+    <p style="color: red; font-weight: bold">
+      ⚡ ACTION REQUIRED: Process and ship this order
+    </p>
+  </body>
+</html>
