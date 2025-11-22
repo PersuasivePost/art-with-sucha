@@ -3,6 +3,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import prisma from "./prisma.js";
+import Razorpay from "razorpay";
 import multer from "multer";
 import {
   S3Client,
@@ -225,7 +226,7 @@ app.get("/sections", async (req, res) => {
     const payload = await fetchSectionsPayload();
     res.json(payload);
   } catch (error) {
-    console.error("Error fetching sections:", error);
+    console.error("Error fetching sections:", (error as any)?.message || error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -275,7 +276,7 @@ app.post("/adminlogin", (req, res) => {
       artist: { email: artistEmail },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error:", (error as any)?.message || error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -352,7 +353,6 @@ app.get("/signup", (req, res) => {
     if (req.method === "HEAD") {
       return res.redirect(302, target);
     }
-
     res.status(200).set("Location", target).send(`<!doctype html>
 <html lang="en">
   <head>
@@ -1667,6 +1667,116 @@ app.get(/^\/image\/(.+)$/, (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server started on http://localhost:${PORT}`);
 });
+
+// -------------------------
+// Background: Pending payment reconciler
+// -------------------------
+// If an order has paymentStatus 'pending' and was created more than 20 minutes ago,
+// attempt to check Razorpay for any payment; if none captured, mark order as failed.
+
+// Create Razorpay instance for status checks (if keys provided)
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "";
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "";
+let razorpayClient: any = null;
+if (razorpayKeyId && razorpayKeySecret) {
+  razorpayClient = new Razorpay({
+    key_id: razorpayKeyId,
+    key_secret: razorpayKeySecret,
+  });
+} else {
+  console.warn(
+    "Razorpay keys not configured - background payment reconciliation disabled"
+  );
+}
+
+async function reconcilePendingPayments() {
+  try {
+    if (!razorpayClient) return;
+
+    const cutoff = new Date(Date.now() - 20 * 60 * 1000); // 20 minutes ago
+    const pendingOrders = await prisma.order.findMany({
+      where: {
+        paymentStatus: "pending",
+        razorpayOrderId: { not: null },
+        createdAt: { lt: cutoff },
+      },
+    });
+
+    if (!pendingOrders || pendingOrders.length === 0) return;
+
+    console.log(
+      `Pending reconciliation: found ${pendingOrders.length} order(s)`
+    );
+
+    for (const o of pendingOrders) {
+      try {
+        const rpOrderId = o.razorpayOrderId as string;
+        // Try to fetch payments associated with this order from Razorpay
+        let paymentsResp: any = null;
+        try {
+          paymentsResp = await razorpayClient.payments.all({
+            order_id: rpOrderId,
+          });
+        } catch (err) {
+          console.warn(
+            `Failed to fetch payments for order ${rpOrderId}:`,
+            (err as any)?.message || String(err)
+          );
+        }
+
+        const payments = (paymentsResp && paymentsResp.items) || [];
+
+        const capturedPayment = payments.find(
+          (p: any) => p.status === "captured" || p.status === "authorized"
+        );
+
+        if (capturedPayment) {
+          // update order as paid/captured
+          await prisma.order.update({
+            where: { id: o.id },
+            data: {
+              paymentStatus: "captured",
+              status: "paid",
+              razorpayPaymentId: capturedPayment.id,
+            },
+          });
+          console.log(
+            `Order ${o.id} marked as captured (payment ${capturedPayment.id})`
+          );
+        } else {
+          // No captured payment found - mark as failed/cancelled
+          await prisma.order.update({
+            where: { id: o.id },
+            data: { paymentStatus: "failed", status: "cancelled" },
+          });
+          console.log(`Order ${o.id} marked as failed (no captured payment)`);
+        }
+      } catch (err) {
+        console.error(
+          `Error reconciling order ${o.id}:`,
+          (err as any)?.message || String(err)
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      "Error during payment reconciliation:",
+      (err as any)?.message || String(err)
+    );
+  }
+}
+
+// Run reconciliation every minute. This will pick orders older than 20 minutes.
+if (razorpayClient) {
+  // initial delay to avoid running during startup thrash
+  setTimeout(() => {
+    reconcilePendingPayments().catch((e) => console.error(e));
+    setInterval(
+      () => reconcilePendingPayments().catch((e) => console.error(e)),
+      60 * 1000
+    );
+  }, 30 * 1000);
+}
 
 // -------------------------
 // Google OAuth2 endpoints
