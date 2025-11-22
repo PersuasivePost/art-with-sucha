@@ -96,6 +96,40 @@ export default function ProductDetail() {
     fetchProduct();
   }, [id]);
 
+  // fetch authoritative wishlist membership for this product on mount
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const token = localStorage.getItem("userToken");
+        if (!token) return;
+        const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
+          /\/+$/g,
+          ""
+        );
+        const isLocalFront =
+          typeof window !== "undefined" &&
+          (window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1");
+        const backendBase = isLocalFront
+          ? import.meta.env.VITE_LOCAL_BACKEND || "http://localhost:5000"
+          : envBackend || "https://art-with-sucha.onrender.com";
+        const backend = backendBase.replace(/\/+$/g, "");
+        const res = await fetch(`${backend}/wishlist`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const ids = (data.items || [])
+          .map((it: any) => it.productId || it.product?.id)
+          .filter(Boolean);
+        setInWishlist(ids.includes(Number(id)));
+      } catch (err) {
+        // ignore
+      }
+    };
+    check();
+  }, [id]);
+
   // Fetch the cart entry for this product to show realtime quantity
   const fetchCartForProduct = async () => {
     try {

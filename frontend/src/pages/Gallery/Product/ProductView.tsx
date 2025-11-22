@@ -601,6 +601,7 @@ export default function ProductsView() {
                             body: JSON.stringify({ productId: product.id }),
                           });
                           showToast("Added to wishlist");
+                          await fetchWishlistIds();
                         } else {
                           await fetch(
                             `${backend}/wishlist/remove-by-product/${encodeURIComponent(
@@ -612,6 +613,7 @@ export default function ProductsView() {
                             }
                           );
                           showToast("Removed from wishlist");
+                          await fetchWishlistIds();
                         }
                       } catch (err) {
                         // rollback optimistic

@@ -6,7 +6,9 @@
 }
 
 .dashboard-container {
-  max-width: 1300px;
+  /* fixed layout width so main content area does not change size based on inner content */
+  width: 1300px;
+  max-width: 100%;
   margin: 0 auto 32px auto;
   flex: 1;
   display: grid;
@@ -23,7 +25,17 @@
   border: 1px solid rgba(11, 18, 32, 0.04);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* align everything to the top so sidebar content appears at the top, not spaced vertically */
+  justify-content: flex-start;
+  gap: 18px;
+  /* keep the sidebar visually fixed and consistent across pages on desktop */
+  position: sticky;
+  top: 96px; /* assumes header occupies ~96px; adjust if your header height differs */
+  align-self: start;
+  /* let the sidebar size to its content but don't exceed the viewport; if content is longer
+    it will scroll independently */
+  max-height: calc(100vh - 96px);
+  overflow: auto; /* allow sidebar to scroll independently when content is long */
 }
 
 .sidebar-brand h2 {
@@ -88,6 +100,10 @@
   }
   .dashboard-sidebar {
     order: 2;
+    /* on mobile, restore normal flow so the sidebar stacks under the main content */
+    position: static;
+    height: auto;
+    overflow: visible;
   }
   .dashboard-main {
     order: 1;
