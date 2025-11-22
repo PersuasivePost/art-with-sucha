@@ -1,0 +1,111 @@
+.dashboard-page {
+  background: linear-gradient(180deg, #fffaf6, #f6f2ed);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-container {
+  /* fixed layout width so main content area does not change size based on inner content */
+  width: 1300px;
+  max-width: 100%;
+  margin: 0 auto 32px auto;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+  padding: 0 20px;
+}
+
+.dashboard-sidebar {
+  background: linear-gradient(180deg, #fff, #fbf6f1);
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 40px 90px rgba(2, 6, 23, 0.06);
+  border: 1px solid rgba(11, 18, 32, 0.04);
+  display: flex;
+  flex-direction: column;
+  /* align everything to the top so sidebar content appears at the top, not spaced vertically */
+  justify-content: flex-start;
+  gap: 18px;
+  /* keep the sidebar visually fixed and consistent across pages on desktop */
+  position: sticky;
+  top: 96px; /* assumes header occupies ~96px; adjust if your header height differs */
+  align-self: start;
+  /* let the sidebar size to its content but don't exceed the viewport; if content is longer
+    it will scroll independently */
+  max-height: calc(100vh - 96px);
+  overflow: auto; /* allow sidebar to scroll independently when content is long */
+}
+
+.sidebar-brand h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.brand-accent {
+  margin-top: 8px;
+  background: linear-gradient(90deg, #b88a1c, #f1d78a);
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.sidebar-nav {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side-link {
+  text-decoration: none;
+  color: #0b1220;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.side-link.active {
+  background: rgba(184, 138, 28, 0.12);
+  box-shadow: 0 8px 20px rgba(11, 18, 32, 0.04);
+}
+
+.sidebar-footer {
+  margin-top: 20px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dashboard-main {
+  min-height: 400px;
+  background: white;
+  border-radius: 12px;
+  padding: 26px;
+  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.06);
+}
+
+@media (max-width: 900px) {
+  .dashboard-container {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-sidebar {
+    order: 2;
+    /* on mobile, restore normal flow so the sidebar stacks under the main content */
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+  .dashboard-main {
+    order: 1;
+  }
+}

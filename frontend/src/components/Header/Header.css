@@ -15,7 +15,7 @@ header.sticky {
   position: sticky;
   top: 0;
   z-index: 1100;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   background: white;
 }
 
@@ -151,6 +151,110 @@ header.sticky {
 .nav-links a:hover {
   color: #222430;
 }
+/* Dashboard and cart: align with nav links */
+.nav-links {
+  align-items: center;
+}
+.nav-dashboard-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-wrapper {
+  position: relative;
+}
+.dashboard-toggle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-block;
+  vertical-align: middle;
+}
+.dashboard-toggle:hover {
+  color: #222430;
+}
+.dashboard-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  z-index: 2000;
+}
+.dashboard-menu a,
+.dashboard-menu button {
+  text-decoration: none;
+  color: #333;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.dashboard-menu a:hover,
+.dashboard-menu button:hover {
+  background: #f5f5f5;
+}
+.cart-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.cart-btn img {
+  height: 18px;
+  width: auto;
+  display: block;
+}
+
+.cart-badge-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+}
+
+.cart-icon-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.cart-count-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #b88a1c;
+  color: white;
+  font-weight: 800;
+  font-size: 12px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(11, 18, 32, 0.18);
+}
 
 /* Search */
 .search-box {
@@ -188,18 +292,25 @@ header.sticky {
 
 .search-icon:hover {
   color: #222430;
-} 
-
-/* Mobile menu toggle */
-.menu-toggle{
-  display:none; background:transparent; border:0; cursor:pointer; padding:6px; margin-right:8px;
 }
 
-@media (max-width: 900px){
-  /* On mobile, show About/Contact as normal header links instead of hiding them behind the hamburger */
-  .menu-toggle{ display:none }
+/* Mobile menu toggle */
+.menu-toggle {
+  display: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 6px;
+  margin-right: 8px;
+}
 
-  .nav-links{
+@media (max-width: 900px) {
+  /* On mobile, show About/Contact as normal header links instead of hiding them behind the hamburger */
+  .menu-toggle {
+    display: none;
+  }
+
+  .nav-links {
     display: flex;
     position: static;
     top: auto;
@@ -214,14 +325,29 @@ header.sticky {
     align-items: center;
   }
 
-  .nav-links.open{ display:flex; flex-direction:row; gap:12px }
+  .nav-links.open {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+  }
 
-  .nav-right{ position:relative; gap:12px; flex-wrap:wrap; align-items:center }
+  .nav-right {
+    position: relative;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
 
   /* Move search below nav links on small screens so links remain visible */
-  .search-box{ order: 3; width:100%; margin-top:8px }
+  .search-box {
+    order: 3;
+    width: 100%;
+    margin-top: 8px;
+  }
 
-  .nav-links a{ padding:6px 8px }
+  .nav-links a {
+    padding: 6px 8px;
+  }
 }
 
 /* Compact auth area so logged-in text doesn't push nav */

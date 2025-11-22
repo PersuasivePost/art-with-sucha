@@ -1,9 +1,9 @@
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 export const authenticateArtist = (req, res, next) => {
     try {
-        const token = req.header('Authorization')?.replace('Bearer ', '');
+        const token = req.header("Authorization")?.replace("Bearer ", "");
         if (!token) {
-            res.status(401).json({ error: 'Access denied. No token provided.' });
+            res.status(401).json({ error: "Access denied. No token provided." });
             return;
         }
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -11,7 +11,29 @@ export const authenticateArtist = (req, res, next) => {
         next();
     }
     catch (error) {
-        res.status(401).json({ error: 'Invalid token.' });
+        res.status(401).json({ error: "Invalid token." });
+    }
+};
+export const authenticateUser = (req, res, next) => {
+    try {
+        const authHeader = req.header("Authorization");
+        const token = authHeader?.replace(/^bearer\s+/i, "") ||
+            authHeader?.replace(/^Bearer\s+/, "");
+        if (!token || token === authHeader) {
+            res.status(401).json({ error: "Access denied. No token provided." });
+            return;
+        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || "devsecret");
+        if (!decoded.userId) {
+            res.status(401).json({ error: "Invalid token format." });
+            return;
+        }
+        req.user = decoded;
+        next();
+    }
+    catch (error) {
+        console.error("User authentication failed:", error);
+        res.status(401).json({ error: "Invalid token." });
     }
 };
 //# sourceMappingURL=auth.js.map

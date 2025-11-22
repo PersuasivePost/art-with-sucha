@@ -4,6 +4,10 @@ declare global {
             artist?: {
                 email: string;
             };
+            user?: {
+                userId: number;
+                email: string;
+            };
         }
     }
 }

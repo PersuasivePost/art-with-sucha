@@ -1,0 +1,166 @@
+.wishlist-page {
+  display: flex;
+  flex-direction: column;
+  /* slightly larger vertical rhythm for a more luxurious feel */
+  gap: 44px;
+  padding: 28px 12px 48px;
+}
+
+.wishlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 28px 22px;
+  background: linear-gradient(
+    180deg,
+    rgba(248, 245, 241, 0.6),
+    rgba(255, 250, 244, 0.6)
+  );
+  border-radius: 14px;
+  border: 1px solid rgba(11, 18, 32, 0.04);
+  box-shadow: 0 40px 120px rgba(2, 6, 23, 0.08);
+  /* create explicit separation between header and the grid/content below */
+  margin-bottom: 28px;
+}
+
+.wishlist-header h1 {
+  margin: 0;
+  font-family: "Playfair Display", Georgia, serif;
+  /* a touch larger for a grand header while staying balanced */
+  font-size: 3rem;
+  color: #0b1220;
+  letter-spacing: 0.025em;
+}
+
+.wishlist-header .muted {
+  margin: 6px 0 0;
+  color: #6b6b6b;
+  font-size: 1rem;
+}
+
+.wishlist-count {
+  background: linear-gradient(90deg, #b88a1c, #f1d78a);
+  color: #0b1220;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.98rem;
+  box-shadow: 0 12px 36px rgba(11, 18, 32, 0.08);
+  border: 1px solid rgba(11, 18, 32, 0.04);
+}
+
+.empty-state {
+  padding: 52px 40px;
+  text-align: center;
+  background: linear-gradient(180deg, #fffaf6, #fbf7f1);
+  border: 1px solid rgba(11, 18, 32, 0.04);
+  border-radius: 14px;
+  box-shadow: 0 40px 100px rgba(2, 6, 23, 0.06);
+}
+
+.wishlist-grid {
+  display: grid;
+  /* fixed-width cards: keep a consistent card width and center the grid */
+  grid-template-columns: repeat(auto-fit, 420px);
+  /* align cards to the left instead of centering them */
+  justify-content: start;
+  gap: 28px;
+  margin-top: 0; /* spacing is now handled by header's margin and page gap */
+}
+
+.wish-card {
+  background: linear-gradient(180deg, #fff, #fbf7f2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 40px 120px rgba(2, 6, 23, 0.08);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(11, 18, 32, 0.04);
+  /* fixed dimensions so cards don't resize with content */
+  width: 420px;
+  flex: 0 0 420px;
+}
+
+.wish-image img {
+  width: 100%;
+  /* slightly taller images to increase perceived card size */
+  height: 320px;
+  object-fit: cover;
+  display: block;
+  border-bottom: 1px solid rgba(11, 18, 32, 0.03);
+}
+
+.wish-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.wish-title {
+  margin: 0;
+  font-size: 1.18rem;
+  color: #0b1220;
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+.wish-artist {
+  color: #6b6b6b;
+  font-size: 0.98rem;
+}
+
+.wish-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wish-price {
+  font-weight: 900;
+  color: #b88a1c;
+  font-size: 1.05rem;
+}
+
+.wish-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #0b1220, #0b1220);
+  color: #fff;
+  box-shadow: 0 12px 36px rgba(11, 18, 32, 0.12);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+}
+
+@media (max-width: 1100px) {
+  .wishlist-grid {
+    grid-template-columns: repeat(2, 1fr);
+    justify-content: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .wishlist-grid {
+    grid-template-columns: 1fr;
+  }
+  /* on narrow screens make cards fluid */
+  .wish-card {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+}

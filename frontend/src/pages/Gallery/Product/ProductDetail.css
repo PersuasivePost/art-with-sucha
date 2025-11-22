@@ -1,0 +1,329 @@
+.pdp-page {
+  font-family: inherit;
+  color: inherit;
+}
+.pdp-main {
+  padding: 1.2rem 1.6rem;
+  max-width: 1400px;
+  margin: 0 auto; /* center the frame horizontally */
+}
+
+/* Two-column layout: large image (3fr) left, details (1fr) right */
+.pdp-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr; /* large image left, slim details right */
+  gap: 3rem;
+  align-items: start;
+}
+
+.pdp-image {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pdp-main-image-container {
+  width: 100%;
+  height: calc(100vh - 140px);
+  max-height: 920px;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 30px 80px rgba(2, 6, 23, 0.12);
+  background: linear-gradient(180deg, #fffaf8, #fbf7f3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Image overlay controls */
+.image-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 6;
+}
+.image-overlay .overlay-heart {
+  background: rgba(255, 255, 255, 0.94);
+  border: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+  color: #333;
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.08);
+  transition: transform 120ms ease, color 120ms ease;
+}
+.image-overlay .overlay-heart.in-wishlist {
+  color: #e0245e;
+  transform: scale(1.04);
+}
+.pdp-main-image-container:hover .image-overlay {
+  opacity: 1;
+  transform: translateY(0);
+}
+.view-btn,
+.zoom-btn {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  color: #0b1220;
+  padding: 6px 10px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.06);
+}
+.view-btn:hover,
+.zoom-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
+}
+
+.pdp-main-img {
+  width: 100%;
+  height: auto;
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 160ms;
+  transform-origin: 50% 50%;
+  cursor: zoom-in;
+  will-change: transform;
+}
+
+.pdp-main-image-container:hover .pdp-main-img {
+  transform: scale(2.2);
+  cursor: zoom-in;
+}
+.pdp-title {
+  font-size: 2.2rem;
+  margin: 0 0 0.6rem;
+  font-family: Georgia, "Times New Roman", "Playfair Display", serif;
+  color: #0b1220;
+  letter-spacing: 0.02em;
+}
+.pdp-price {
+  font-size: 1.6rem;
+  color: #b88a1c; /* gold accent */
+  margin-bottom: 1.2rem;
+  font-weight: 800;
+}
+.pdp-desc {
+  margin-bottom: 1.2rem;
+  line-height: 1.6;
+  color: #333;
+  font-size: 1rem;
+}
+.pdp-tags {
+  margin-bottom: 1.2rem;
+}
+.pdp-tag {
+  display: inline-block;
+  background: rgba(11, 18, 32, 0.04);
+  color: #0b1220;
+  padding: 6px 10px;
+  border-radius: 999px;
+  margin-right: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.pdp-addcart {
+  background: #0b1220;
+  color: #fff;
+  border: none;
+  padding: 0.9rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 12px 36px rgba(11, 18, 32, 0.12);
+}
+
+/* Inline cart controls (posh) */
+.pdp-cart-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.pdp-cart-control .pdp-addcart {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.cart-decrease,
+.cart-increase {
+  background: #fff;
+  border: 1px solid rgba(11, 18, 32, 0.06);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
+}
+.cart-decrease:disabled,
+.cart-increase:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cart-pill {
+  min-width: 44px;
+  text-align: center;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 999px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
+  border: 1px solid rgba(11, 18, 32, 0.04);
+}
+.cart-notice {
+  margin-top: 10px;
+  color: #0b1220;
+  background: rgba(184, 138, 28, 0.06);
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: inline-block;
+  font-weight: 600;
+}
+.pdp-actions {
+  margin-top: 1.2rem;
+}
+.pdp-placeholder {
+  background: #f8f5f2;
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  border-radius: 8px;
+}
+
+/* Thumbnail column */
+.pdp-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-right: 0.8rem;
+  align-items: center;
+}
+
+.pdp-thumb-btn {
+  width: 84px;
+  height: 84px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(11, 18, 32, 0.04);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 160ms, box-shadow 160ms, border-color 160ms;
+}
+
+.pdp-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.pdp-thumb-btn.active {
+  transform: translateX(-4px);
+  box-shadow: 0 12px 30px rgba(16, 24, 40, 0.12);
+  border-color: rgba(11, 18, 32, 0.12);
+}
+@media (max-width: 800px) {
+  .pdp-grid {
+    grid-template-columns: 1fr;
+  }
+  .pdp-image {
+    flex-direction: column;
+  }
+  .pdp-main-image-container {
+    width: 100%;
+    height: auto;
+  }
+  .pdp-main-img {
+    transform: none !important;
+  }
+}
+
+/* Reviews styling */
+.pdp-reviews {
+  margin-top: 2rem;
+}
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.review-item {
+  background: #fff;
+  padding: 14px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.06);
+  border: 1px solid rgba(11, 18, 32, 0.03);
+}
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.review-rating {
+  color: #b88a1c;
+  font-weight: 700;
+}
+.review-msg {
+  margin: 8px 0;
+  color: #333;
+}
+.review-time {
+  font-size: 12px;
+  color: #888;
+}
+.review-form {
+  background: #fbfaf7;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(11, 18, 32, 0.04);
+}
+.review-form h4 {
+  margin-top: 0;
+}
+.review-actions button {
+  background: #0b1220;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+}
+
+/* Heart in PDP */
+.pdp-heart {
+  font-size: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #333;
+}
+.pdp-heart.in-wishlist {
+  color: #e0245e;
+}
+
+/* Bottom toast */
+.bottom-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 24px;
+  background: rgba(2, 6, 23, 0.96);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.24);
+  z-index: 1200;
+  font-weight: 700;
+}

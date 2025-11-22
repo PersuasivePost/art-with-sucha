@@ -10,37 +10,37 @@
  * Usage:
  *   npm run migrate-images
  */
-import { PrismaClient } from '@prisma/client';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { Octokit } from '@octokit/rest';
-import dotenv from 'dotenv';
+import prisma from "./prisma.js";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { Octokit } from "@octokit/rest";
+import dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
-const prisma = new PrismaClient();
+// (use shared prisma from ../prisma.ts)
 // Initialize Backblaze S3 Client
 const s3Client = new S3Client({
-    region: process.env.B2_REGION || 'us-east-005',
-    endpoint: process.env.B2_ENDPOINT || 'https://s3.us-east-005.backblazeb2.com',
+    region: process.env.B2_REGION || "us-east-005",
+    endpoint: process.env.B2_ENDPOINT || "https://s3.us-east-005.backblazeb2.com",
     credentials: {
-        accessKeyId: process.env.B2_APPLICATION_KEY_ID || '',
-        secretAccessKey: process.env.B2_APPLICATION_KEY || '',
+        accessKeyId: process.env.B2_APPLICATION_KEY_ID || "",
+        secretAccessKey: process.env.B2_APPLICATION_KEY || "",
     },
     forcePathStyle: true,
 });
 // Initialize GitHub Octokit
 const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN
+    auth: process.env.GITHUB_TOKEN,
 });
-const GITHUB_OWNER = process.env.GITHUB_REPO_OWNER || 'PersuasivePost';
-const GITHUB_REPO = process.env.GITHUB_REPO_NAME || 'art-with-sucha-images';
-const GITHUB_BRANCH = process.env.GITHUB_REPO_BRANCH || 'main';
+const GITHUB_OWNER = process.env.GITHUB_REPO_OWNER || "PersuasivePost";
+const GITHUB_REPO = process.env.GITHUB_REPO_NAME || "art-with-sucha-images";
+const GITHUB_BRANCH = process.env.GITHUB_REPO_BRANCH || "main";
 const stats = {
     totalSections: 0,
     totalProducts: 0,
     sectionsProcessed: 0,
     productsProcessed: 0,
     imagesMigrated: 0,
-    errors: []
+    errors: [],
 };
 /**
  * Download image from Backblaze B2
@@ -48,7 +48,7 @@ const stats = {
 async function downloadFromB2(key) {
     try {
         const command = new GetObjectCommand({
-            Bucket: process.env.B2_BUCKET_NAME || '',
+            Bucket: process.env.B2_BUCKET_NAME || "",
             Key: key,
         });
         const response = await s3Client.send(command);
@@ -70,7 +70,7 @@ async function downloadFromB2(key) {
  */
 async function uploadToGitHub(key, buffer) {
     try {
-        const contentBase64 = buffer.toString('base64');
+        const contentBase64 = buffer.toString("base64");
         await octokit.repos.createOrUpdateFileContents({
             owner: GITHUB_OWNER,
             repo: GITHUB_REPO,
@@ -104,13 +104,13 @@ async function migrateImage(key) {
  * Migrate section cover images
  */
 async function migrateSections() {
-    console.log('\n📁 Migrating Section Images...\n');
+    console.log("\n📁 Migrating Section Images...\n");
     const sections = await prisma.section.findMany({
         where: {
             coverImage: {
-                not: null
-            }
-        }
+                not: null,
+            },
+        },
     });
     stats.totalSections = sections.length;
     console.log(`Found ${sections.length} sections with images\n`);
@@ -122,7 +122,7 @@ async function migrateSections() {
                 // Update database with new GitHub URL
                 await prisma.section.update({
                     where: { id: section.id },
-                    data: { coverImage: newUrl }
+                    data: { coverImage: newUrl },
                 });
                 console.log(`  ✓ Database updated with new URL\n`);
                 stats.sectionsProcessed++;
@@ -139,16 +139,16 @@ async function migrateSections() {
  * Migrate product images
  */
 async function migrateProducts() {
-    console.log('\n🖼️  Migrating Product Images...\n');
+    console.log("\n🖼️  Migrating Product Images...\n");
     const products = await prisma.product.findMany({
         where: {
             images: {
-                isEmpty: false
-            }
+                isEmpty: false,
+            },
         },
         include: {
-            section: true
-        }
+            section: true,
+        },
     });
     stats.totalProducts = products.length;
     console.log(`Found ${products.length} products with images\n`);
@@ -172,7 +172,7 @@ async function migrateProducts() {
             // Update database with new GitHub URLs
             await prisma.product.update({
                 where: { id: product.id },
-                data: { images: newImageUrls }
+                data: { images: newImageUrls },
             });
             console.log(`  ✓ Database updated with new URLs\n`);
             stats.productsProcessed++;
@@ -188,27 +188,27 @@ async function migrateProducts() {
  * Main migration function
  */
 async function main() {
-    console.log('╔═══════════════════════════════════════════════════════╗');
-    console.log('║   Image Migration: Backblaze B2 → GitHub Repository  ║');
-    console.log('╚═══════════════════════════════════════════════════════╝\n');
+    console.log("╔═══════════════════════════════════════════════════════╗");
+    console.log("║   Image Migration: Backblaze B2 → GitHub Repository  ║");
+    console.log("╚═══════════════════════════════════════════════════════╝\n");
     // Verify configurations
-    console.log('Configuration Check:');
+    console.log("Configuration Check:");
     console.log(`  B2 Bucket: ${process.env.B2_BUCKET_NAME}`);
     console.log(`  B2 Endpoint: ${process.env.B2_ENDPOINT}`);
     console.log(`  GitHub Repo: ${GITHUB_OWNER}/${GITHUB_REPO}`);
     console.log(`  GitHub Branch: ${GITHUB_BRANCH}`);
-    console.log(`  GitHub Token: ${process.env.GITHUB_TOKEN ? '✓ Set' : '✗ Missing'}\n`);
+    console.log(`  GitHub Token: ${process.env.GITHUB_TOKEN ? "✓ Set" : "✗ Missing"}\n`);
     if (!process.env.GITHUB_TOKEN) {
-        console.error('❌ GITHUB_TOKEN not set in .env file!');
+        console.error("❌ GITHUB_TOKEN not set in .env file!");
         process.exit(1);
     }
     // Confirm before proceeding
-    console.log('⚠️  This will:');
-    console.log('  1. Download all images from Backblaze B2');
-    console.log('  2. Upload them to GitHub repository');
-    console.log('  3. Update database with new GitHub URLs\n');
-    console.log('Starting migration in 3 seconds...\n');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log("⚠️  This will:");
+    console.log("  1. Download all images from Backblaze B2");
+    console.log("  2. Upload them to GitHub repository");
+    console.log("  3. Update database with new GitHub URLs\n");
+    console.log("Starting migration in 3 seconds...\n");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     const startTime = Date.now();
     try {
         // Migrate sections
@@ -217,27 +217,27 @@ async function main() {
         await migrateProducts();
         // Print summary
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-        console.log('\n╔═══════════════════════════════════════════════════════╗');
-        console.log('║                  Migration Complete!                  ║');
-        console.log('╚═══════════════════════════════════════════════════════╝\n');
-        console.log('📊 Summary:');
+        console.log("\n╔═══════════════════════════════════════════════════════╗");
+        console.log("║                  Migration Complete!                  ║");
+        console.log("╚═══════════════════════════════════════════════════════╝\n");
+        console.log("📊 Summary:");
         console.log(`  Duration: ${duration}s`);
         console.log(`  Sections: ${stats.sectionsProcessed}/${stats.totalSections}`);
         console.log(`  Products: ${stats.productsProcessed}/${stats.totalProducts}`);
         console.log(`  Images Migrated: ${stats.imagesMigrated}`);
         console.log(`  Errors: ${stats.errors.length}\n`);
         if (stats.errors.length > 0) {
-            console.log('⚠️  Errors encountered:');
+            console.log("⚠️  Errors encountered:");
             stats.errors.forEach((error, index) => {
                 console.log(`  ${index + 1}. ${error}`);
             });
-            console.log('');
+            console.log("");
         }
-        console.log('✅ All done! You can now switch to GitHub storage in your .env file.');
-        console.log('   Set USE_GITHUB_STORAGE=true and restart the backend.\n');
+        console.log("✅ All done! You can now switch to GitHub storage in your .env file.");
+        console.log("   Set USE_GITHUB_STORAGE=true and restart the backend.\n");
     }
     catch (error) {
-        console.error('\n❌ Migration failed:', error.message);
+        console.error("\n❌ Migration failed:", error.message);
         process.exit(1);
     }
     finally {
@@ -246,7 +246,7 @@ async function main() {
 }
 // Run migration
 main().catch((error) => {
-    console.error('Fatal error:', error);
+    console.error("Fatal error:", error);
     process.exit(1);
 });
 //# sourceMappingURL=migrate-images.js.map
