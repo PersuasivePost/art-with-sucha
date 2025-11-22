@@ -47,6 +47,7 @@ console.log(`📦 Storage Mode: ${getStorageType().toUpperCase()}`);
 console.log(`🎨 Ready to serve!\n`);
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 5000;
 
 // Initialize S3 client for Backblaze B2
@@ -1678,9 +1679,9 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 // Redirect user to Google's OAuth2 consent screen
 app.get("/auth/google/login", (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = `${req.protocol}://${req.get(
-    "host"
-  )}/auth/google/callback`;
+  const redirectUri =
+    process.env.GOOGLE_REDIRECT_URI ||
+    `${req.protocol}://${req.get("host")}/auth/google/callback`;
   if (!clientId) {
     return res.status(500).send("Google client ID not configured");
   }
@@ -1704,9 +1705,11 @@ app.get("/auth/google/callback", async (req, res) => {
 
     const clientId = process.env.GOOGLE_CLIENT_ID || "";
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
-    const redirectUri = `${req.protocol}://${req.get(
-      "host"
-    )}/auth/google/callback`;
+    // Use explicit env var if provided (must match Google console). Otherwise
+    // build from the incoming request (works if trust proxy is set correctly).
+    const redirectUri =
+      process.env.GOOGLE_REDIRECT_URI ||
+      `${req.protocol}://${req.get("host")}/auth/google/callback`;
 
     if (!clientId || !clientSecret) {
       console.error("Google client ID/secret not set");
