@@ -26,7 +26,7 @@ export default function AdminLogin() {
     try {
       const backendUrl =
         import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-      const response = await fetch(`${backendUrl}/login`, {
+      const response = await fetch(`${backendUrl}/adminlogin`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
