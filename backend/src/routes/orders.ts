@@ -26,11 +26,23 @@ router.post("/checkout", authenticateUser, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: "Cart is empty" });
     }
 
-    // Calculate total amount
-    const totalAmount = cartItems.reduce(
+    // Calculate total amount (sum of items) and include mandatory delivery charge
+    const itemsTotal = cartItems.reduce(
       (sum: number, item: any) => sum + item.product.price * item.quantity,
       0
     );
+
+    const DELIVERY_CHARGE = 100; // compulsory delivery fee in INR
+    const totalAmount = itemsTotal + DELIVERY_CHARGE;
+
+    // Ensure user has provided phone (mobno) and address before allowing checkout
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.mobno || !user.address) {
+      return res.status(400).json({
+        error:
+          "Please add your phone number and address in your profile before checkout",
+      });
+    }
 
     // Create order with order items in a transaction
     const order = await prisma.$transaction(async (tx: any) => {

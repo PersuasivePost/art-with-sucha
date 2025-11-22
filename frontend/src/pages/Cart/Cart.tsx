@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import Header from "../../components/Header/Header";
 import Footer from "../../components/Footer/Footer";
@@ -26,6 +26,8 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
 
   const envBackend = (import.meta.env.VITE_BACKEND_URL || "").replace(
     /\/+$/g,
@@ -63,6 +65,33 @@ export default function Cart() {
     fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (toastTimerRef.current) {
+          window.clearTimeout(toastTimerRef.current);
+          toastTimerRef.current = null;
+        }
+      } catch {}
+    };
+  }, []);
+
+  function showToast(msg: string) {
+    try {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    } catch {}
+    setToast(msg);
+    // @ts-ignore
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      // @ts-ignore
+      toastTimerRef.current = null;
+    }, 3000) as unknown as number;
+  }
 
   const updateQuantity = async (itemId: number, quantity: number) => {
     if (quantity < 1) return;
@@ -141,12 +170,19 @@ export default function Cart() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || "Checkout failed");
+        // If profile information missing, include a hint for the user
+        const errMsg = body?.error || "Checkout failed";
+        showToast(errMsg);
+        // If it's the specific profile-missing error, show a persistent CTA toast (link handled in UI below)
+        if (errMsg.includes("phone number") || errMsg.includes("address")) {
+          // keep toast visible a bit longer
+        }
+        throw new Error(errMsg);
       }
-      alert("Order placed successfully");
+      showToast("Order placed successfully");
       await fetchCart();
     } catch (e: any) {
-      alert(e.message || "Checkout failed");
+      showToast(e.message || "Checkout failed");
     }
   };
 
@@ -154,6 +190,10 @@ export default function Cart() {
     (sum, it) => sum + (it.product?.price || 0) * it.quantity,
     0
   );
+
+  // Match server-side compulsory delivery charge
+  const DELIVERY_CHARGE = 100;
+  const totalWithDelivery = totalAmount + DELIVERY_CHARGE;
 
   return (
     <div>
@@ -271,9 +311,17 @@ export default function Cart() {
                   <span>Items</span>
                   <span>{cartItems.reduce((s, i) => s + i.quantity, 0)}</span>
                 </div>
+                <div className="summary-row">
+                  <span>Subtotal</span>
+                  <span>₹{totalAmount.toFixed(2)}</span>
+                </div>
+                <div className="summary-row">
+                  <span>Delivery</span>
+                  <span>₹{DELIVERY_CHARGE.toFixed(2)}</span>
+                </div>
                 <div className="summary-row total">
                   <span>Total</span>
-                  <span>₹{totalAmount.toFixed(2)}</span>
+                  <span>₹{totalWithDelivery.toFixed(2)}</span>
                 </div>
                 <div className="summary-actions">
                   <button onClick={checkout} className="checkout-btn">
@@ -311,6 +359,25 @@ export default function Cart() {
       </main>
 
       <Footer />
+      {toast ? (
+        <div className="bottom-toast" role="status" aria-live="polite">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span>{toast}</span>
+            {toast.includes("phone number") || toast.includes("address") ? (
+              <Link
+                to="/profile"
+                style={{
+                  color: "#fff",
+                  textDecoration: "underline",
+                  marginLeft: 8,
+                }}
+              >
+                Update profile
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
