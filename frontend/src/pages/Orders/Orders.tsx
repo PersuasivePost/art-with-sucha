@@ -15,6 +15,9 @@ type Order = {
   id: number;
   totalAmount: number;
   status: string;
+  paymentStatus?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
   createdAt: string;
   orderItems: OrderItem[];
 };
@@ -187,7 +190,19 @@ const Orders = () => {
                   <h2>Order #{selected.id}</h2>
                   <div className="detail-row">
                     <strong>Status:</strong>
-                    <span>{selected.status}</span>
+                    <span className={`order-status status-${selected.status}`}>
+                      {selected.status}
+                    </span>
+                  </div>
+                  <div className="detail-row">
+                    <strong>Payment Status:</strong>
+                    <span
+                      className={`order-status status-${
+                        selected.paymentStatus || "pending"
+                      }`}
+                    >
+                      {selected.paymentStatus || "pending"}
+                    </span>
                   </div>
                   <div className="detail-row">
                     <strong>Date:</strong>
@@ -197,6 +212,26 @@ const Orders = () => {
                     <strong>Total:</strong>
                     <span>₹{selected.totalAmount.toFixed(2)}</span>
                   </div>
+                  {selected.razorpayPaymentId && (
+                    <div className="detail-row">
+                      <strong>Payment ID:</strong>
+                      <span
+                        style={{ fontSize: "0.85rem", wordBreak: "break-all" }}
+                      >
+                        {selected.razorpayPaymentId}
+                      </span>
+                    </div>
+                  )}
+                  {selected.razorpayOrderId && (
+                    <div className="detail-row">
+                      <strong>Order ID:</strong>
+                      <span
+                        style={{ fontSize: "0.85rem", wordBreak: "break-all" }}
+                      >
+                        {selected.razorpayOrderId}
+                      </span>
+                    </div>
+                  )}
 
                   <hr />
 

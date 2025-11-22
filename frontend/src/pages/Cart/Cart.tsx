@@ -162,25 +162,100 @@ export default function Cart() {
 
   const checkout = async () => {
     try {
-      const res = await fetch(`${backendUrl}/orders/checkout`, {
+      // Step 1: Create order on server
+      const res = await fetch(`${backendUrl}/payment/create-order`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("userToken")}`,
         },
       });
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        // If profile information missing, include a hint for the user
         const errMsg = body?.error || "Checkout failed";
         showToast(errMsg);
-        // If it's the specific profile-missing error, show a persistent CTA toast (link handled in UI below)
         if (errMsg.includes("phone number") || errMsg.includes("address")) {
           // keep toast visible a bit longer
         }
         throw new Error(errMsg);
       }
-      showToast("Order placed successfully");
-      await fetchCart();
+
+      const data = await res.json();
+
+      if (!data.success || !data.order) {
+        throw new Error("Failed to create order");
+      }
+
+      // Step 2: Open Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "", // Get from env
+        amount: Math.round(data.order.amount * 100), // Amount in paise
+        currency: data.order.currency,
+        name: "Art with Sucha",
+        description: "Purchase from Art with Sucha",
+        order_id: data.order.razorpayOrderId,
+        handler: async function (response: any) {
+          // Step 3: Verify payment on server
+          try {
+            const verifyRes = await fetch(`${backendUrl}/payment/verify`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+              },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.success) {
+              showToast("Payment successful! Order confirmed.");
+              await fetchCart();
+              try {
+                localStorage.setItem("cartUpdated", String(Date.now()));
+              } catch {}
+            } else {
+              throw new Error(
+                verifyData.error || "Payment verification failed"
+              );
+            }
+          } catch (err: any) {
+            showToast(err.message || "Payment verification failed");
+          }
+        },
+        prefill: {
+          name: data.order.user.name || "",
+          email: data.order.user.email || "",
+          contact: data.order.user.contact || "",
+        },
+        theme: {
+          color: "#3399cc",
+        },
+        modal: {
+          ondismiss: function () {
+            showToast("Payment cancelled");
+          },
+        },
+      };
+
+      // Load Razorpay script and open checkout
+      if (!(window as any).Razorpay) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => {
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        };
+        document.body.appendChild(script);
+      } else {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      }
     } catch (e: any) {
       showToast(e.message || "Checkout failed");
     }
