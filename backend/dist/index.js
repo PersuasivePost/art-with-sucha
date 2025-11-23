@@ -1406,8 +1406,9 @@ app.listen(PORT, () => {
 // -------------------------
 // Background: Pending payment reconciler
 // -------------------------
-// If an order has paymentStatus 'pending' and was created more than 20 minutes ago,
+// If an order has paymentStatus 'pending' and was created more than N minutes ago,
 // attempt to check Razorpay for any payment; if none captured, mark order as failed.
+// The grace period (in minutes) can be configured via PAYMENT_RECONCILE_MINUTES env var.
 // Create Razorpay instance for status checks (if keys provided)
 const razorpayKeyId = process.env.RAZORPAY_KEY_ID || "";
 const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || "";
@@ -1425,7 +1426,8 @@ async function reconcilePendingPayments() {
     try {
         if (!razorpayClient)
             return;
-        const cutoff = new Date(Date.now() - 20 * 60 * 1000); // 20 minutes ago
+        const minutes = parseInt(process.env.PAYMENT_RECONCILE_MINUTES || "15", 10) || 15;
+        const cutoff = new Date(Date.now() - minutes * 60 * 1000); // minutes ago
         const pendingOrders = await prisma.order.findMany({
             where: {
                 paymentStatus: "pending",
@@ -1435,7 +1437,7 @@ async function reconcilePendingPayments() {
         });
         if (!pendingOrders || pendingOrders.length === 0)
             return;
-        console.log(`Pending reconciliation: found ${pendingOrders.length} order(s)`);
+        console.log(`Pending reconciliation: found ${pendingOrders.length} order(s) older than ${minutes} minute(s)`);
         for (const o of pendingOrders) {
             try {
                 const rpOrderId = o.razorpayOrderId;
@@ -1450,7 +1452,8 @@ async function reconcilePendingPayments() {
                     console.warn(`Failed to fetch payments for order ${rpOrderId}:`, err?.message || String(err));
                 }
                 const payments = (paymentsResp && paymentsResp.items) || [];
-                const capturedPayment = payments.find((p) => p.status === "captured" || p.status === "authorized");
+                // Only treat 'captured' as a confirmed payment. 'authorized' is not sufficient.
+                const capturedPayment = payments.find((p) => p.status === "captured");
                 if (capturedPayment) {
                     // update order as paid/captured
                     await prisma.order.update({

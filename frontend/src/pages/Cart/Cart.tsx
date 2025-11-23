@@ -236,8 +236,27 @@ export default function Cart() {
           color: "#3399cc",
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
             showToast("Payment cancelled");
+            // Immediately notify backend that payment was cancelled
+            try {
+              await fetch(`${backendUrl}/payment/failure`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+                },
+                body: JSON.stringify({
+                  razorpay_order_id: data.order.razorpayOrderId,
+                  error: "User cancelled payment",
+                }),
+              });
+            } catch (err) {
+              console.error(
+                "Failed to notify backend of payment cancellation:",
+                err
+              );
+            }
           },
         },
       };
