@@ -1,12 +1,29 @@
-import * as Prisma from "@prisma/client";
+import "dotenv/config";
 
-// Some environments / packaging setups may not expose a named export in a way
-// TypeScript always recognizes. Use a safe-any access to ensure the runtime
-// PrismaClient is constructed while keeping the types working at compile time.
+import pkg from "@prisma/client";
+
 const PrismaClientCtor: any =
-  (Prisma as any).PrismaClient ||
-  (Prisma as any).default?.PrismaClient ||
-  (Prisma as any).default;
-const prisma = new PrismaClientCtor();
+  (pkg as any).PrismaClient ||
+  (pkg as any).default?.PrismaClient ||
+  (pkg as any).default ||
+  pkg;
+
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+
+// Ensure DATABASE_URL is available
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error(
+    "DATABASE_URL is not set. Set it in backend/.env or your environment before starting the server."
+  );
+}
+
+// Create a pg Pool and PrismaPg adapter
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
+
+// Initialize Prisma Client with the adapter (cast to any to avoid typing mismatches)
+const prisma = new PrismaClientCtor({ adapter } as any);
 
 export default prisma;

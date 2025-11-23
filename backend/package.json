@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "sh -c \"npx tsc -w & nodemon --watch dist --exec 'node dist/index.js'\"",
+    "dev": "sh -c \"npx prisma generate && npx tsc -w & nodemon --watch dist --exec 'node dist/index.js'\"",
     "build": "tsc",
     "build:watch": "tsc -w",
     "start": "node dist/index.js",
@@ -22,7 +22,10 @@
     "@aws-sdk/client-s3": "^3.884.0",
     "@aws-sdk/s3-request-presigner": "^3.886.0",
     "@octokit/rest": "^22.0.0",
-    "@prisma/client": "^6.15.0",
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "@prisma/config": "^7.0.0",
+    "@types/pg": "^8.15.6",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -31,6 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
+    "pg": "^8.16.3",
     "razorpay": "^2.9.6",
     "uuid": "^13.0.0"
   },
@@ -44,7 +48,7 @@
     "@types/nodemailer": "^7.0.4",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.10",
-    "prisma": "^6.15.0",
+    "prisma": "^7.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
