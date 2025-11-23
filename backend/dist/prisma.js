@@ -1,10 +1,10 @@
-import * as Prisma from "@prisma/client";
-// Some environments / packaging setups may not expose a named export in a way
-// TypeScript always recognizes. Use a safe-any access to ensure the runtime
-// PrismaClient is constructed while keeping the types working at compile time.
-const PrismaClientCtor = Prisma.PrismaClient ||
-    Prisma.default?.PrismaClient ||
-    Prisma.default;
+// Safe import for @prisma/client when using ESM + CommonJS generated client
+import pkg from "@prisma/client";
+// Support various package shapes; use any to satisfy TypeScript while keeping runtime safe
+const PrismaClientCtor = pkg.PrismaClient ||
+    pkg.default?.PrismaClient ||
+    pkg.default ||
+    pkg;
 const prisma = new PrismaClientCtor();
 export default prisma;
 //# sourceMappingURL=prisma.js.map
