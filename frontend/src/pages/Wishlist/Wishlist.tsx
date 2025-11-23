@@ -34,6 +34,9 @@ const getBackendBase = () => {
 
 export default function Wishlist() {
   const [items, setItems] = useState<WishlistItem[]>([]);
+  const [cartMap, setCartMap] = useState<
+    Record<number, { id?: number; quantity: number }>
+  >({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number | null>(null);
@@ -61,6 +64,13 @@ export default function Wishlist() {
 
   useEffect(() => {
     fetchWishlist();
+    fetchCart();
+    // keep in sync when other tabs update cart
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "cartUpdated") fetchCart();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // No storage sync; rely on server-side state. Users can refresh or remove/add will refetch.
@@ -115,6 +125,44 @@ export default function Wishlist() {
       }
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function fetchCart() {
+    try {
+      const token = localStorage.getItem("userToken");
+      const backend = getBackendBase();
+      if (token) {
+        const res = await fetch(`${backend}/cart`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!res.ok) {
+          setCartMap({});
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        const map: Record<number, { id?: number; quantity: number }> = {};
+        (data.cartItems || []).forEach((ci: any) => {
+          map[ci.productId] = { id: ci.id, quantity: ci.quantity || 1 };
+        });
+        setCartMap(map);
+        return;
+      }
+
+      // unauthenticated: read localStorage cart
+      const local = JSON.parse(localStorage.getItem("cart") || "[]");
+      const map: Record<number, { quantity: number }> = {};
+      (local || []).forEach((c: any) => {
+        const pid = Number(c.productId || c.productId);
+        map[pid] = { quantity: c.qty || c.quantity || 1 };
+      });
+      setCartMap(map);
+    } catch (err) {
+      console.error("Failed to fetch cart for wishlist", err);
+      setCartMap({});
     }
   }
 
@@ -218,14 +266,32 @@ export default function Wishlist() {
                       {it.product?.price ? `₹ ${it.product.price}` : "—"}
                     </div>
                     <div className="wish-buttons">
-                      <button
-                        className="btn btn-primary"
-                        onClick={() =>
-                          addToCart(it.product?.id ?? it.productId)
+                      {(() => {
+                        const pid = it.product?.id ?? it.productId;
+                        const entry = pid ? cartMap[Number(pid)] : undefined;
+                        if (entry) {
+                          return (
+                            <>
+                              <button className="btn btn-ghost" disabled>
+                                In Cart (Qty: {entry.quantity})
+                              </button>
+                              <Link to="/cart" className="btn btn-primary">
+                                Update Cart
+                              </Link>
+                            </>
+                          );
                         }
-                      >
-                        Add to cart
-                      </button>
+                        return (
+                          <button
+                            className="btn btn-primary"
+                            onClick={() =>
+                              addToCart(it.product?.id ?? it.productId)
+                            }
+                          >
+                            Add to cart
+                          </button>
+                        );
+                      })()}
                       <button
                         className="btn btn-ghost"
                         onClick={() => removeFromWishlist(it.productId)}
