@@ -109,6 +109,14 @@ router.post("/verify", authenticateUser, async (req, res) => {
     try {
         const userId = req.user?.userId;
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+        // CRITICAL LOGGING - track who is calling verify
+        console.log("=== PAYMENT VERIFY CALLED ===");
+        console.log("User ID:", userId);
+        console.log("Razorpay Order ID:", razorpay_order_id);
+        console.log("Razorpay Payment ID:", razorpay_payment_id);
+        console.log("Request Headers:", req.headers);
+        console.log("Request IP:", req.ip);
+        console.log("=============================");
         if (!userId) {
             return res.status(401).json({ error: "User not authenticated" });
         }
@@ -147,7 +155,49 @@ router.post("/verify", authenticateUser, async (req, res) => {
                 success: false,
             });
         }
-        // Signature is valid - update order and clear cart
+        // Signature is valid - BUT verify payment status with Razorpay before marking as paid
+        try {
+            // Fetch the actual payment from Razorpay to verify it's captured
+            const payment = await razorpayInstance.payments.fetch(razorpay_payment_id);
+            console.log("=== RAZORPAY PAYMENT STATUS ===");
+            console.log("Payment ID:", razorpay_payment_id);
+            console.log("Status:", payment.status);
+            console.log("Method:", payment.method);
+            console.log("Amount:", payment.amount);
+            console.log("Captured:", payment.captured);
+            console.log("==============================");
+            // Only mark as paid if Razorpay confirms payment status is "captured"
+            if (payment.status !== "captured") {
+                console.log(`🚫 PAYMENT REJECTED - Status: ${payment.status} (not captured)`);
+                await prisma.order.update({
+                    where: { id: order.id },
+                    data: {
+                        paymentStatus: "failed",
+                        status: "cancelled",
+                    },
+                });
+                return res.status(400).json({
+                    error: `Payment not captured. Current status: ${payment.status}`,
+                    success: false,
+                });
+            }
+            console.log("✅ PAYMENT VERIFIED AND CAPTURED - Proceeding to mark as paid");
+        }
+        catch (fetchError) {
+            console.error("Error fetching payment from Razorpay:", fetchError);
+            await prisma.order.update({
+                where: { id: order.id },
+                data: {
+                    paymentStatus: "failed",
+                    status: "cancelled",
+                },
+            });
+            return res.status(400).json({
+                error: "Failed to verify payment with Razorpay",
+                success: false,
+            });
+        }
+        // Payment is genuinely captured - update order and clear cart
         await prisma.$transaction(async (tx) => {
             // Update order with payment details
             await tx.order.update({
@@ -212,6 +262,7 @@ router.post("/failure", authenticateUser, async (req, res) => {
             },
         });
         if (order) {
+            // Mark order as failed immediately when payment failure is reported
             await prisma.order.update({
                 where: { id: order.id },
                 data: {
