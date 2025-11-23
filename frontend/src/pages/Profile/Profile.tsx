@@ -83,21 +83,15 @@ const Profile = () => {
       let wishlist = 0;
 
       try {
-        const oRes = await fetch(`${backendUrl}/orders/count`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (oRes.ok) {
-          const od = await oRes.json();
-          orders = typeof od.count === "number" ? od.count : orders;
-        } else {
-          // fallback to fetching user's orders list
-          const oList = await fetch(`${backendUrl}/orders?mine=true`, {
+        const cRes = await fetch(
+          `${backendUrl}/orders/count?capturedOnly=true`,
+          {
             headers: { Authorization: `Bearer ${token}` },
-          });
-          if (oList.ok) {
-            const od = await oList.json();
-            orders = (od.orders || []).length;
           }
+        );
+        if (cRes.ok) {
+          const cd = await cRes.json();
+          orders = typeof cd.count === "number" ? cd.count : orders;
         }
       } catch (err) {
         // ignore

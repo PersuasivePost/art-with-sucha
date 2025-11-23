@@ -57,7 +57,12 @@ router.get("/count", authenticateUser, async (req, res) => {
         const userId = req.user?.userId;
         if (!userId)
             return res.status(401).json({ error: "User not authenticated" });
-        const count = await prisma.order.count({ where: { userId } });
+        // If caller requests capturedOnly, count only orders with paymentStatus 'captured'
+        const capturedOnly = String(req.query.capturedOnly || "").toLowerCase() === "true";
+        const where = { userId };
+        if (capturedOnly)
+            where.paymentStatus = "captured";
+        const count = await prisma.order.count({ where });
         res.json({ count });
     }
     catch (err) {
